@@ -12,22 +12,34 @@
             background-color: #111827;
             color: #d1d5db;
         }
+        .quote-banner {
+            transition: opacity 0.5s ease-in-out;
+        }
     </style>
 </head>
 <body class="p-4 sm:p-6 lg:p-8">
     <div class="max-w-4xl mx-auto">
+        <!-- SECCIÓN DE FRASES MOTIVACIONALES -->
+        <div id="quote-banner" class="quote-banner bg-gray-800 border border-blue-500/30 p-4 rounded-lg mb-8 text-center shadow-lg">
+            <p id="quote-text" class="text-lg italic text-gray-300"></p>
+        </div>
+
         <header class="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-white">Historial de Movimientos</h1>
                 <p class="text-gray-400 mt-1">Un registro de todas tus operaciones.</p>
             </div>
             <a href="./index.html" class="w-full sm:w-auto px-5 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                </svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" /></svg>
                 Volver al Asistente
             </a>
         </header>
+
+        <!-- SECCIÓN DE FILTROS -->
+        <div class="mb-6 bg-gray-800 p-4 rounded-lg">
+            <label for="date-filter" class="block text-sm font-medium text-gray-300 mb-2">Filtrar por fecha:</label>
+            <input type="date" id="date-filter" class="w-full sm:w-auto bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
 
         <div id="loading-message" class="text-center text-gray-400 py-10">
             <p>Cargando historial...</p>
@@ -37,12 +49,23 @@
             <!-- Las transacciones se renderizarán aquí -->
         </div>
     </div>
+    
+    <!-- MODAL DE CONFIRMACIÓN PARA BORRAR -->
+    <div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center">
+        <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm">
+            <h3 class="text-lg font-bold text-white">Confirmar Eliminación</h3>
+            <p class="text-gray-400 mt-2">¿Estás seguro de que quieres eliminar esta transacción? Esta acción no se puede deshacer.</p>
+            <div class="mt-6 flex justify-end gap-4">
+                <button id="cancel-delete-btn" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500">Cancelar</button>
+                <button id="confirm-delete-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500">Eliminar</button>
+            </div>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, orderBy, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // **ACCIÓN REQUERIDA**: TU CONFIGURACIÓN DE FIREBASE YA ESTÁ AQUÍ.
         const firebaseConfig = {
           apiKey: "AIzaSyA6qN_uF3ljC3MuzVgXc0IcQdNXHdYdVZQ",
           authDomain: "asistente-financiero-de-luis.firebaseapp.com",
@@ -51,28 +74,61 @@
           messagingSenderId: "1042510262841",
           appId: "1:1042510262841:web:46a4a02d88c3cc1523d3e8"
         };
-
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // --- LÓGICA PARA FRASES MOTIVACIONALES ---
+        const quotes = [
+            "La ansiedad financiera es una falla de diseño, no de carácter. La soberanía financiera puede ser diseñada.",
+            "En lugar de depender de la fuerza de voluntad, debemos construir estructuras que hagan las decisiones correctas automáticas.",
+            "El propósito último de la riqueza no es comprar más cosas, sino obtener control y autonomía sobre tu tiempo.",
+            "Los buenos hábitos financieros no se fuerzan, emergen naturalmente cuando el sistema los facilita.",
+            "La libertad financiera no se trata de tomar más decisiones, sino de tomar unas pocas decisiones excelentes de forma deliberada.",
+            "La resiliencia no es un rasgo abstracto, es una capacidad que se construye sistemáticamente."
+        ];
+        const quoteText = document.getElementById('quote-text');
+        const quoteBanner = document.getElementById('quote-banner');
+        let currentQuoteIndex = 0;
+
+        function showNextQuote() {
+            if(!quoteBanner || !quoteText) return;
+            quoteBanner.style.opacity = 0;
+            setTimeout(() => {
+                currentQuoteIndex = (currentQuoteIndex + 1) % quotes.length;
+                quoteText.innerText = `"${quotes[currentQuoteIndex]}"`;
+                quoteBanner.style.opacity = 1;
+            }, 500);
+        }
+        showNextQuote();
+        setInterval(showNextQuote, 10000); // Cambia la frase cada 10 segundos
+
+
+        // --- LÓGICA PARA TRANSACCIONES (CON FILTRO Y BORRADO) ---
         const transactionsList = document.getElementById('transactions-list');
         const loadingMessage = document.getElementById('loading-message');
+        const dateFilter = document.getElementById('date-filter');
+        const deleteModal = document.getElementById('delete-modal');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        let transactionToDeleteId = null;
 
+        // **FIX**: La función getTransactionVisuals estaba faltando en el script anterior.
         function getTransactionVisuals(type, amount) {
-            if (type === 'income' || amount > 0) {
+            if (type === 'income' || (amount && amount > 0)) {
                 return {
                     icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01"/></svg>`,
                     color: 'text-green-400',
                     bgColor: 'bg-green-500/10'
                 };
             }
-            if (type === 'expense' || amount < 0) {
+            if (type === 'expense' || (amount && amount < 0)) {
                  return {
                     icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01"/></svg>`,
                     color: 'text-red-400',
                     bgColor: 'bg-red-500/10'
                 };
             }
+            // Por defecto para 'creation' o tipos neutros
             return {
                 icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l-4 4-4-4 4-4"/></svg>`,
                 color: 'text-blue-400',
@@ -80,25 +136,40 @@
             };
         }
 
-        async function fetchAndDisplayTransactions() {
+        async function fetchAndDisplayTransactions(filterDate = null) {
+            transactionsList.innerHTML = '';
+            loadingMessage.style.display = 'block';
+            loadingMessage.innerText = 'Cargando historial...';
+
             try {
-                const q = query(collection(db, "transactions"), orderBy("date", "desc"));
+                let q;
+                if (filterDate) {
+                    const startOfDay = new Date(filterDate);
+                    startOfDay.setUTCHours(0, 0, 0, 0);
+                    const endOfDay = new Date(filterDate);
+                    endOfDay.setUTCHours(23, 59, 59, 999);
+                    q = query(collection(db, "transactions"), where("date", ">=", startOfDay), where("date", "<=", endOfDay), orderBy("date", "desc"));
+                } else {
+                    q = query(collection(db, "transactions"), orderBy("date", "desc"));
+                }
+                
                 const querySnapshot = await getDocs(q);
 
                 if (querySnapshot.empty) {
-                    loadingMessage.innerText = "No se encontraron transacciones en tu historial.";
+                    loadingMessage.innerText = "No se encontraron transacciones para esta selección.";
                     return;
                 }
-
                 loadingMessage.style.display = 'none';
                 
                 querySnapshot.forEach((doc) => {
                     const transaction = doc.data();
+                    const transactionId = doc.id;
                     const date = transaction.date ? transaction.date.toDate().toLocaleString('es-ES', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Fecha no disponible';
                     const visuals = getTransactionVisuals(transaction.type, transaction.amount);
                     
                     const transactionElement = document.createElement('div');
-                    transactionElement.className = 'bg-gray-800 p-4 rounded-lg flex items-center space-x-4 hover:bg-gray-700/50 transition-colors';
+                    transactionElement.className = 'bg-gray-800 p-4 rounded-lg flex items-center space-x-4';
+                    transactionElement.id = `txn-${transactionId}`;
                     
                     const amount = transaction.amount || 0;
                     
@@ -110,21 +181,61 @@
                             <p class="font-semibold text-white">${transaction.description || 'Sin descripción'}</p>
                             <p class="text-sm text-gray-400">${date}</p>
                         </div>
-                        <div class="text-lg font-bold ${visuals.color} text-right">
+                        <div class="text-lg font-bold ${visuals.color} text-right mr-4">
                             ${amount > 0 ? '+' : ''}${amount.toLocaleString('es-ES', {style: 'currency', currency: 'MXN'})}
                         </div>
+                        <button data-id="${transactionId}" class="delete-btn text-gray-500 hover:text-red-400 p-2 rounded-full hover:bg-red-500/10">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                        </button>
                     `;
                     transactionsList.appendChild(transactionElement);
+                });
+
+                document.querySelectorAll('.delete-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        transactionToDeleteId = button.dataset.id;
+                        deleteModal.style.display = 'flex';
+                    });
                 });
 
             } catch (error) {
                 console.error("Error al cargar transacciones:", error);
                 loadingMessage.innerText = `Error al cargar el historial: ${error.message}`;
-                loadingMessage.classList.add('text-red-400');
             }
         }
+        
+        cancelDeleteBtn.addEventListener('click', () => {
+            transactionToDeleteId = null;
+            deleteModal.style.display = 'none';
+        });
 
-        window.onload = fetchAndDisplayTransactions;
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (!transactionToDeleteId) return;
+            try {
+                await deleteDoc(doc(db, "transactions", transactionToDeleteId));
+                const elementToRemove = document.getElementById(`txn-${transactionToDeleteId}`);
+                if(elementToRemove) elementToRemove.remove();
+                
+                transactionToDeleteId = null;
+                deleteModal.style.display = 'none';
+            } catch (error) {
+                console.error("Error al borrar la transacción: ", error);
+                alert("No se pudo borrar la transacción.");
+            }
+        });
+
+        dateFilter.addEventListener('change', () => {
+            if(dateFilter.value) {
+                const [year, month, day] = dateFilter.value.split('-').map(Number);
+                const selectedDate = new Date(year, month - 1, day);
+                fetchAndDisplayTransactions(selectedDate);
+            } else {
+                fetchAndDisplayTransactions();
+            }
+        });
+
+        window.onload = () => fetchAndDisplayTransactions();
     </script>
 </body>
 </html>
