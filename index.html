@@ -7,29 +7,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #030712; /* Gris casi negro para un look premium */
-            color: #e5e7eb; /* Texto un poco más claro */
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #030712; color: #e5e7eb; }
         #chat-container::-webkit-scrollbar, #financial-sidebar::-webkit-scrollbar { width: 8px; }
         #chat-container::-webkit-scrollbar-track, #financial-sidebar::-webkit-scrollbar-track { background: #111827; }
         #chat-container::-webkit-scrollbar-thumb, #financial-sidebar::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
-        #chat-container::-webkit-scrollbar-thumb:hover, #financial-sidebar::-webkit-scrollbar-thumb:hover { background: #4b5563; }
-        
         .chat-bubble-user { background: linear-gradient(to right, #3b82f6, #60a5fa); color: white; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2); }
         .chat-bubble-ai { background-color: #1f2937; color: #f9fafb; }
         .chat-bubble-error { background-color: #4c1d1d; color: #fecaca; border: 1px solid #7f1d1d;}
-        
         .status-card { background-color: #111827; border: 1px solid #1f2937; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
         .status-title { color: #f9fafb; font-weight: 600; }
         .status-value { color: #d1d5db; }
         .status-value.positive { color: #4ade80; }
         .status-value.negative { color: #f87171; }
-
         .loader { width: 24px; height: 24px; border: 3px solid #374151; border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 10px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
         .loading-overlay { position: fixed; inset: 0; background-color: rgba(3, 7, 18, 0.9); z-index: 50; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
     </style>
 </head>
@@ -46,7 +37,7 @@
         <div id="financial-status" class="space-y-4 h-[calc(100%-4rem)]"></div>
     </aside>
 
-    <div id="main-content" class="flex flex-col h-screen lg:ml-80 transition-all duration-300 ease-in-out">
+    <main id="main-content" class="flex flex-col h-screen lg:ml-80 transition-all duration-300 ease-in-out">
         <header class="flex items-center p-4 bg-[#030712] border-b border-gray-800 shadow-md">
             <button id="menu-btn" class="p-2 mr-4 text-gray-400 rounded-lg hover:bg-gray-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-600">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
@@ -54,11 +45,10 @@
             <h1 class="text-xl font-semibold text-white">Asistente Financiero</h1>
         </header>
         
-        <main id="chat-container" class="flex-1 p-6 overflow-y-auto"></main>
+        <div id="chat-container" class="flex-1 p-6 overflow-y-auto"></div>
         
         <div id="loading-indicator" class="hidden items-center px-6 py-2">
-            <div class="loader"></div>
-            <span class="text-gray-400">El asistente está pensando...</span>
+            <div class="loader"></div><span class="text-gray-400">El asistente está pensando...</span>
         </div>
         
         <footer class="p-4 bg-[#030712] border-t border-gray-800">
@@ -69,16 +59,13 @@
                 </button>
             </div>
             <div class="mt-3 flex justify-center">
-                <a href="./movimientos.html" class="px-5 py-2 bg-gray-800 text-sm text-gray-400 rounded-full hover:bg-gray-700 transition-colors shadow-sm">
-                    Ver Historial de Movimientos
-                </a>
+                <a href="./movimientos.html" class="px-5 py-2 bg-gray-800 text-sm text-gray-400 rounded-full hover:bg-gray-700 transition-colors shadow-sm">Ver Historial de Movimientos</a>
             </div>
         </footer>
-    </div>
+    </main>
     
     <div id="loading-overlay" class="loading-overlay">
-        <div class="loader"></div>
-        <p class="text-gray-300">Cargando datos desde la base de datos...</p>
+        <div class="loader"></div><p class="text-gray-300">Cargando datos desde la base de datos...</p>
     </div>
 
     <script type="module">
@@ -86,7 +73,6 @@
         import { getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- 1. CONFIGURACIÓN ---
-        
         const firebaseConfig = {
           apiKey: "AIzaSyA6qN_uF3ljC3MuzVgXc0IcQdNXHdYdVZQ",
           authDomain: "asistente-financiero-de-luis.firebaseapp.com",
@@ -95,12 +81,22 @@
           messagingSenderId: "1042510262841",
           appId: "1:1042510262841:web:46a4a02d88c3cc1523d3e8"
         };
-        
         const GEMINI_API_KEY = "AIzaSyB04aZK2GwiyRAAV5lrfczaM9Lx9iMV-wU";
         
+        // --- REFERENCIAS A ELEMENTOS UI ---
         const loadingOverlay = document.getElementById('loading-overlay');
+        const menuBtn = document.getElementById('menu-btn');
+        const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+        const sidebar = document.getElementById('financial-sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const financialStatusContainer = document.getElementById('financial-status');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        
         if (!firebaseConfig.apiKey) {
-             loadingOverlay.innerHTML = `<div class="p-4 bg-red-800 text-white rounded-lg text-center max-w-md"><h2 class="font-bold text-lg">Error de Configuración</h2><p class="mt-1">Falta la configuración de Firebase.</p></div>`;
+            loadingOverlay.innerHTML = `<div class="p-4 bg-red-800 text-white rounded-lg text-center max-w-md"><h2 class="font-bold text-lg">Error de Configuración</h2><p class="mt-1">Falta la configuración de Firebase.</p></div>`;
             throw new Error("Configuración de Firebase incompleta.");
         }
 
@@ -113,29 +109,122 @@
         const dbDocRef = doc(db, "financialData", "luisState");
         const transactionsCollectionRef = collection(db, "transactions");
 
-        const menuBtn = document.getElementById('menu-btn');
-        const closeSidebarBtn = document.getElementById('close-sidebar-btn');
-        const sidebar = document.getElementById('financial-sidebar');
-        const sidebarOverlay = document.getElementById('sidebar-overlay');
-        const chatContainer = document.getElementById('chat-container');
-        const userInput = document.getElementById('user-input');
-        const sendButton = document.getElementById('send-button');
-        const financialStatusContainer = document.getElementById('financial-status');
-        const loadingIndicator = document.getElementById('loading-indicator');
+        // --- LÓGICA DE CÁLCULO (ROBUSTA) ---
+        function handleFinancialAction(action) {
+            let description = "";
+            let originalAmount = parseFloat(action.amount) || 0;
 
-        const toggleSidebar = (show) => {
-            if (show) {
-                sidebar.classList.remove('-translate-x-full');
-                if (window.innerWidth < 1024) sidebarOverlay.classList.remove('hidden');
+            if (action.action === "add_income") {
+                let income = originalAmount;
+                let distributions = [];
+                description = `Ingreso de ${income.toLocaleString('es-MX', {style: 'currency', currency: 'MXN'})} aplicado. Distribución: `;
+                
+                // 1. Llenar Colchón Caja
+                let colchon = financialState.cuentas.colchonCaja;
+                if (colchon.saldo < colchon.meta) {
+                    let needed = colchon.meta - colchon.saldo;
+                    let toApply = Math.min(income, needed);
+                    colchon.saldo += toApply;
+                    income -= toApply;
+                    if(toApply > 0) distributions.push(`${toApply.toLocaleString('es-MX', {style:'currency', currency:'MXN'})} a Colchón Caja.`);
+                }
+
+                // 2. Llenar Mini Fondo
+                let miniFondo = financialState.cuentas.miniFondo;
+                if (income > 0 && miniFondo.saldo < miniFondo.meta) {
+                    let needed = miniFondo.meta - miniFondo.saldo;
+                    let toApply = Math.min(income, needed);
+                    miniFondo.saldo += toApply;
+                    income -= toApply;
+                    if(toApply > 0) distributions.push(`${toApply.toLocaleString('es-MX', {style:'currency', currency:'MXN'})} a Mini Fondo.`);
+                }
+                
+                // 3. Sobrante a la cuenta corriente
+                if (income > 0) {
+                    financialState.cuentas.corriente.saldo += income;
+                     if(income > 0) distributions.push(`${income.toLocaleString('es-MX', {style:'currency', currency:'MXN'})} a Cuenta Corriente.`);
+                }
+                
+                description += distributions.join(' ');
+            
+            } else if (action.action === "create_goal") {
+                if (!financialState.sinkingFunds) financialState.sinkingFunds = [];
+                financialState.sinkingFunds.push({
+                    nombre: action.name,
+                    saldo: 0,
+                    meta: parseFloat(action.amount)
+                });
+                description = `Nueva meta de ahorro "${action.name}" creada.`;
+                originalAmount = 0; // No es un movimiento de dinero
+            
             } else {
-                sidebar.classList.add('-translate-x-full');
-                if (window.innerWidth < 1024) sidebarOverlay.classList.add('hidden');
+                 description = "Acción no reconocida por el sistema de cálculo.";
             }
-        };
-        menuBtn.addEventListener('click', () => toggleSidebar(true));
-        closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
-        sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
 
+            renderFinancialStatus();
+            saveFinancialState();
+            saveTransaction(description, originalAmount, 'income');
+            addMessageToChat(description, 'ai');
+        }
+
+        async function handleUserInput() {
+            if (!GEMINI_API_KEY || GEMINI_API_KEY === "PEGA_TU_API_KEY_DE_GEMINI_AQUI") {
+                addMessageToChat("Error de configuración: Falta la clave API de Gemini.", "ai", "error"); return;
+            }
+            const query = userInput.value.trim();
+            if (!query) return;
+            addMessageToChat(query, 'user');
+            userInput.value = '';
+            userInput.disabled = true;
+            sendButton.disabled = true;
+            loadingIndicator.style.display = 'flex';
+            
+            chatHistory.push({ role: "user", parts: [{ text: query }] });
+            try {
+                const systemInstruction = { parts: [{ text: buildSystemPrompt() }] };
+                const payload = {
+                    contents: chatHistory,
+                    system_instruction: systemInstruction,
+                    generationConfig: { responseMimeType: "application/json" }
+                };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) { throw new Error(`Error de la API: ${response.status}`); }
+
+                const result = await response.json();
+                if (result.candidates && result.candidates[0].content?.parts?.length > 0) {
+                    const actionJson = result.candidates[0].content.parts[0].text;
+                    const action = JSON.parse(actionJson);
+                    chatHistory.push({ role: 'model', parts: [{ text: actionJson }] });
+                    handleFinancialAction(action);
+                } else {
+                    addMessageToChat("No entendí la acción. Por favor, intenta de nuevo.", "ai", "error");
+                }
+            } catch (error) {
+                console.error("Error en handleUserInput:", error);
+                addMessageToChat(`Ocurrió un error al procesar tu solicitud: ${error.message}.`, "ai", "error");
+            } finally {
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                loadingIndicator.style.display = 'none';
+                userInput.focus();
+            }
+        }
+
+        function buildSystemPrompt() {
+            return `
+                Tu rol es analizar la petición del usuario y extraer la intención en un formato JSON simple.
+                Si el usuario menciona un ingreso, extrae el monto.
+                Si el usuario quiere crear una meta, extrae el nombre y el monto.
+                Si no puedes identificar una acción clara, responde con: { "action": "clarify", "message": "No entendí, ¿puedes explicarlo de otra manera?" }.
+                Responde únicamente con el objeto JSON.
+                
+                Ejemplos:
+                - Usuario: "recibí 25,000 pesos de un trabajo" -> { "action": "add_income", "amount": 25000 }
+                - Usuario: "crea una meta para un coche de 50000" -> { "action": "create_goal", "name": "coche", "amount": 50000 }
+            `;
+        }
+        
         async function loadOrCreateInitialData() {
             try {
                 const docSnap = await getDoc(dbDocRef);
@@ -156,7 +245,6 @@
                 userInput.focus();
             }
         }
-        
         async function saveFinancialState() {
             try {
                 await setDoc(dbDocRef, financialState);
@@ -164,7 +252,6 @@
                 addMessageToChat(`Hubo un error al guardar tu información: ${error.message}`, "ai", "error");
             }
         }
-        
         async function saveTransaction(description, amount, type) {
             try {
                 await addDoc(transactionsCollectionRef, { description, amount, type, date: serverTimestamp() });
@@ -172,37 +259,34 @@
                 console.error("Error al guardar la transacción:", error);
             }
         }
-        
         function renderFinancialStatus() {
+            if (!financialStatusContainer) return;
             financialStatusContainer.innerHTML = ''; 
             let accountsHtml = '<div class="status-card rounded-lg p-4"><h3 class="text-lg font-semibold mb-2 status-title">Cuentas Principales</h3><div class="space-y-3">';
-            for (const [key, value] of Object.entries(financialState.cuentas)) {
+            for (const [key, value] of Object.entries(financialState.cuentas || {})) {
                 const progress = value.meta ? (value.saldo / value.meta * 100).toFixed(0) : -1;
-                accountsHtml += `<div class="text-sm"><div class="flex justify-between mb-1"><span class="font-medium capitalize status-value">${key.replace(/([A-Z])/g, ' $1')}</span><span class="font-bold status-value positive">$${value.saldo.toLocaleString()}</span></div>${progress !== -1 ? `<div class="w-full bg-gray-800 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full" style="width: ${progress}%"></div></div>` : ''}</div>`;
+                accountsHtml += `<div class="text-sm"><div class="flex justify-between mb-1"><span class="font-medium capitalize status-value">${key.replace(/([A-Z])/g, ' $1')}</span><span class="font-bold status-value positive">$${(value.saldo || 0).toLocaleString()}</span></div>${progress !== -1 ? `<div class="w-full bg-gray-800 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full" style="width: ${progress}%"></div></div>` : ''}</div>`;
             }
             accountsHtml += '</div></div>';
             financialStatusContainer.innerHTML += accountsHtml;
-
             let sinkingFundsHtml = '<div class="status-card rounded-lg p-4"><h3 class="text-lg font-semibold mb-2 status-title">Sinking Funds (Metas)</h3><div class="space-y-3">';
             if (financialState.sinkingFunds && financialState.sinkingFunds.length > 0) {
                 financialState.sinkingFunds.forEach(fund => {
                     const progress = (fund.saldo / fund.meta * 100).toFixed(0);
-                    sinkingFundsHtml += `<div class="text-sm"><div class="flex justify-between mb-1"><span class="font-medium status-value">${fund.nombre}</span><span class="font-bold status-value positive">$${fund.saldo.toLocaleString()} / $${fund.meta.toLocaleString()}</span></div><div class="w-full bg-gray-800 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: ${progress}%"></div></div></div>`;
+                    sinkingFundsHtml += `<div class="text-sm"><div class="flex justify-between mb-1"><span class="font-medium status-value">${fund.nombre}</span><span class="font-bold status-value positive">$${(fund.saldo || 0).toLocaleString()} / $${(fund.meta || 0).toLocaleString()}</span></div><div class="w-full bg-gray-800 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: ${progress}%"></div></div></div>`;
                 });
             } else {
                 sinkingFundsHtml += `<p class="text-sm text-gray-500">No hay metas de ahorro activas.</p>`;
             }
             sinkingFundsHtml += '</div></div>';
             financialStatusContainer.innerHTML += sinkingFundsHtml;
-            
             let deudasHtml = '<div class="status-card rounded-lg p-4"><h3 class="text-lg font-semibold mb-2 status-title">Deudas Vigentes</h3><div class="space-y-2">';
-            financialState.deudas.forEach(deuda => {
-                deudasHtml += `<div class="text-sm flex justify-between"><span class="font-medium status-value">${deuda.acreedor}</span><span class="font-bold status-value negative">$${deuda.saldo.toLocaleString()}</span></div>`;
+            (financialState.deudas || []).forEach(deuda => {
+                deudasHtml += `<div class="text-sm flex justify-between"><span class="font-medium status-value">${deuda.acreedor}</span><span class="font-bold status-value negative">$${(deuda.saldo || 0).toLocaleString()}</span></div>`;
             });
             deudasHtml += '</div></div>';
             financialStatusContainer.innerHTML += deudasHtml;
         }
-
         function addMessageToChat(message, sender, type = 'ai') {
             const messageDiv = document.createElement('div');
             messageDiv.className = `w-full flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
@@ -216,114 +300,6 @@
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
-
-        async function handleUserInput() {
-            if (!GEMINI_API_KEY || GEMINI_API_KEY === "PEGA_TU_API_KEY_DE_GEMINI_AQUI") {
-                addMessageToChat("Error de configuración: Falta la clave API de Gemini.", "ai", "error"); return;
-            }
-            if (!firebaseConfig.apiKey) {
-                addMessageToChat("Error de configuración: Falta la configuración de Firebase.", "ai", "error"); return;
-            }
-            const query = userInput.value.trim();
-            if (!query) return;
-            addMessageToChat(query, 'user');
-            userInput.value = '';
-            userInput.disabled = true;
-            sendButton.disabled = true;
-            loadingIndicator.style.display = 'flex';
-            chatHistory.push({ role: "user", parts: [{ text: query }] });
-            try {
-                const systemInstruction = { parts: [{ text: `${buildSystemPrompt()}\n\n--- ESTADO FINANCIERO ACTUAL (JSON) ---\n${JSON.stringify(financialState, null, 2)}` }] };
-                const payload = { contents: chatHistory, system_instruction: systemInstruction };
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) {
-                    const errorBody = await response.json().catch(() => ({}));
-                    throw new Error(`Error de la API: ${response.status} ${response.statusText}. ${errorBody?.error?.message || 'Revisa que tu clave API sea correcta.'}`);
-                }
-                const result = await response.json();
-                if (result.candidates && result.candidates[0].content?.parts?.length > 0) {
-                    await processAIResponse(result.candidates[0].content.parts[0].text);
-                } else {
-                    addMessageToChat("Lo siento, no pude procesar la respuesta de la IA.", "ai", "error");
-                }
-            } catch (error) {
-                addMessageToChat(`Ocurrió un error: ${error.message}.`, "ai", "error");
-            } finally {
-                userInput.disabled = false;
-                sendButton.disabled = false;
-                loadingIndicator.style.display = 'none';
-                userInput.focus();
-            }
-        }
-
-        async function processAIResponse(responseText) {
-            const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
-            const match = responseText.match(jsonRegex);
-            let chatMessage = responseText;
-            chatHistory.push({ role: 'model', parts: [{ text: responseText }] });
-            if (match && match[1]) {
-                const jsonString = match[1];
-                chatMessage = responseText.replace(jsonRegex, '').trim();
-                try {
-                    const newState = JSON.parse(jsonString);
-                    const oldState = JSON.parse(JSON.stringify(financialState));
-                    financialState = newState;
-                    renderFinancialStatus();
-                    await saveFinancialState();
-                    
-                    const diff = (newState.cuentas.corriente.saldo + (newState.cuentas.colchonCaja?.saldo || 0) + (newState.cuentas.miniFondo?.saldo || 0)) - (oldState.cuentas.corriente.saldo + (oldState.cuentas.colchonCaja?.saldo || 0) + (oldState.cuentas.miniFondo?.saldo || 0));
-                    if (chatMessage.toLowerCase().includes("ingreso")) {
-                        await saveTransaction(chatMessage, diff || 0, 'income');
-                    } else if (chatMessage.toLowerCase().includes("meta creada")) {
-                         await saveTransaction(chatMessage, 0, 'creation');
-                    } else if (chatMessage.toLowerCase().includes("deuda registrada")) {
-                         await saveTransaction(chatMessage, 0, 'creation');
-                    }
-                    
-                    chatMessage += "\n\n(He actualizado el estado financiero y guardado la transacción en el historial.)";
-                } catch (e) {
-                    console.error("Error al procesar la respuesta:", e);
-                    chatMessage += "\n\n(Error: No pude actualizar el estado financiero.)";
-                }
-            }
-            addMessageToChat(chatMessage, 'ai');
-        }
-
-        function buildSystemPrompt() {
-            return `
-                Eres un asistente financiero personal para Luis. Tu comportamiento se rige ESTRICTAMENTE por las siguientes reglas.
-                
-                ### REGLA DE PRIORIDAD MÁXIMA: GESTIÓN DE ESTADO
-                1.  Tu lógica se basa EXCLUSIVAMENTE en el archivo 'estado_luis.json'.
-                2.  Si una interacción cambia las finanzas, tu respuesta final DEBE incluir un bloque \`\`\`json con el objeto 'estado_luis.json' actualizado.
-                3.  Si es solo una consulta, NO devuelvas un bloque JSON.
-
-                ### PROTOCOLO DE INTERACCIÓN Y LÓGICA
-                1.  **Analiza la conversación completa.** No preguntes por información ya dada.
-                2.  **PIC**: Si faltan datos numéricos para una acción, pide la información.
-                3.  **Regla de Acción Única**: Tras ejecutar una acción y devolver el JSON, considera la tarea completada. Espera una NUEVA instrucción.
-
-                ### LÓGICA DE DECISIONES CLAVE
-                
-                **1. Prioridad Maestra y Lógica de Desbordamiento (REGLA INVIOLABLE):**
-                Al recibir un ingreso, SIEMPRE debes procesarlo siguiendo estos pasos exactos:
-                a. **Calcular faltante y asignar a 'colchonCaja'**: Calcula cuánto falta para la meta de 20,000. Asigna solo la cantidad necesaria del ingreso. No superes la meta.
-                b. **Calcular sobrante y asignar a 'miniFondo'**: Si después del paso (a) sobra dinero del ingreso, repite el proceso para 'miniFondo'. Calcula cuánto falta para su meta de 20,000 y asigna solo esa cantidad.
-                c. **Desbordamiento a 'jerarquiaMetasActiva'**: Si después de los pasos (a) y (b) AÚN sobra dinero, consulta la lista 'jerarquiaMetasActiva'. Asigna el sobrante a la primera meta de esa lista, calculando el faltante para no superar su meta. Si la completas y sigue sobrando dinero, pasa a la siguiente meta en la lista.
-                d. **Sobrante final**: Si después de todo el proceso aún queda dinero, súmalo a la 'cuentaCorriente'.
-
-                **2. Protocolos de Creación:**
-                - **PCM (Crear Meta)**: Si el usuario quiere 'crear una nueva meta de ahorro', pide 'nombre' y 'monto'. Añade un nuevo objeto a 'sinkingFunds'.
-                - **PRD (Registrar Deuda)**: Si el usuario quiere 'registrar una nueva deuda', pide 'acreedor', 'saldo', 'pago mensual' y 'tipo'. Añade un nuevo objeto a 'deudas'.
-                
-                **3. Protocolos de Emergencia:**
-                - **PE-4 (Médico > $10k)**: SÍ usar 'miniFondo' y 'fondo6m'.
-                - **PE-5 (Herramienta > $5k)**: NO usar fondos existentes. Pausar meta activa y crear NUEVO sinking fund.
-
-                Tu tono es profesional y directo.
-            `;
-        }
         
         window.onload = loadOrCreateInitialData;
         sendButton.addEventListener('click', handleUserInput);
@@ -333,6 +309,21 @@
                 handleUserInput();
             }
         });
+        
+        const toggleSidebar = (show) => {
+            const sidebar = document.getElementById('financial-sidebar');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            if (show) {
+                sidebar.classList.remove('-translate-x-full');
+                if (window.innerWidth < 1024) sidebarOverlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                if (window.innerWidth < 1024) sidebarOverlay.classList.add('hidden');
+            }
+        };
+        document.getElementById('menu-btn').addEventListener('click', () => toggleSidebar(true));
+        document.getElementById('close-sidebar-btn').addEventListener('click', () => toggleSidebar(false));
+        document.getElementById('sidebar-overlay').addEventListener('click', () => toggleSidebar(false));
 
     </script>
 </body>
