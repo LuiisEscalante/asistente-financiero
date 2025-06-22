@@ -101,8 +101,7 @@
         const loadingOverlay = document.getElementById('loading-overlay');
 
         if (!firebaseConfig.apiKey) {
-            loadingOverlay.innerHTML = `<div class="p-4 bg-red-800 text-white rounded-lg text-center max-w-md">
-                <h2 class="font-bold text-lg">Error de Configuración</h2><p class="mt-1">Falta la configuración de Firebase.</p></div>`;
+            loadingOverlay.innerHTML = `<div class="p-4 bg-red-800 text-white rounded-lg text-center max-w-md"><h2 class="font-bold text-lg">Error de Configuración</h2><p class="mt-1">Falta la configuración de Firebase.</p></div>`;
             throw new Error("Configuración de Firebase incompleta.");
         }
 
@@ -119,6 +118,7 @@
         const closeSidebarBtn = document.getElementById('close-sidebar-btn');
         const sidebar = document.getElementById('financial-sidebar');
         const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const mainContent = document.getElementById('main-content');
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
@@ -186,10 +186,14 @@
             financialStatusContainer.innerHTML += accountsHtml;
 
             let sinkingFundsHtml = '<div class="status-card rounded-lg p-4"><h3 class="text-lg font-semibold mb-2 status-title">Sinking Funds (Metas)</h3><div class="space-y-3">';
-            financialState.sinkingFunds.forEach(fund => {
-                const progress = (fund.saldo / fund.meta * 100).toFixed(0);
-                sinkingFundsHtml += `<div class="text-sm"><div class="flex justify-between mb-1"><span class="font-medium status-value">${fund.nombre}</span><span class="font-bold status-value positive">$${fund.saldo.toLocaleString()} / $${fund.meta.toLocaleString()}</span></div><div class="w-full bg-gray-800 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: ${progress}%"></div></div></div>`;
-            });
+            if (financialState.sinkingFunds && financialState.sinkingFunds.length > 0) {
+                financialState.sinkingFunds.forEach(fund => {
+                    const progress = (fund.saldo / fund.meta * 100).toFixed(0);
+                    sinkingFundsHtml += `<div class="text-sm"><div class="flex justify-between mb-1"><span class="font-medium status-value">${fund.nombre}</span><span class="font-bold status-value positive">$${fund.saldo.toLocaleString()} / $${fund.meta.toLocaleString()}</span></div><div class="w-full bg-gray-800 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: ${progress}%"></div></div></div>`;
+                });
+            } else {
+                sinkingFundsHtml += `<p class="text-sm text-gray-500">No hay metas de ahorro activas.</p>`;
+            }
             sinkingFundsHtml += '</div></div>';
             financialStatusContainer.innerHTML += sinkingFundsHtml;
             
@@ -269,8 +273,7 @@
                     financialState = newState;
                     renderFinancialStatus();
                     await saveFinancialState();
-                    
-                    const diff = (newState.cuentas.corriente.saldo + newState.cuentas.colchonCaja.saldo + newState.cuentas.miniFondo.saldo) - (oldState.cuentas.corriente.saldo + oldState.cuentas.colchonCaja.saldo + oldState.cuentas.miniFondo.saldo);
+                    const diff = (newState.cuentas.corriente.saldo + (newState.cuentas.colchonCaja?.saldo || 0) + (newState.cuentas.miniFondo?.saldo || 0)) - (oldState.cuentas.corriente.saldo + (oldState.cuentas.colchonCaja?.saldo || 0) + (oldState.cuentas.miniFondo?.saldo || 0));
                     if (chatMessage.toLowerCase().includes("ingreso")) {
                         await saveTransaction(chatMessage, diff || 0, 'income');
                     } else if (chatMessage.toLowerCase().includes("meta creada")) {
@@ -281,6 +284,7 @@
                     
                     chatMessage += "\n\n(He actualizado el estado financiero y guardado la transacción en el historial.)";
                 } catch (e) {
+                    console.error("Error al procesar la respuesta:", e);
                     chatMessage += "\n\n(Error: No pude actualizar el estado financiero.)";
                 }
             }
@@ -292,30 +296,31 @@
                 Eres un asistente financiero personal para Luis. Tu comportamiento se rige ESTRICTAMENTE por las siguientes reglas.
                 
                 ### REGLA DE PRIORIDAD MÁXIMA: GESTIÓN DE ESTADO
-                1.  Tu lógica se basa EXCLUSIVAMENTE en el archivo 'estado_luis.json' que se te proporciona.
+                1.  Tu lógica se basa EXCLUSIVAMENTE en el archivo 'estado_luis.json'.
                 2.  Si una interacción cambia las finanzas, tu respuesta final DEBE incluir un bloque \`\`\`json con el objeto 'estado_luis.json' actualizado.
                 3.  Si es solo una consulta, NO devuelvas un bloque JSON.
 
                 ### PROTOCOLO DE INTERACCIÓN Y LÓGICA
                 1.  **Analiza la conversación completa.** No preguntes por información ya dada.
                 2.  **PIC**: Si faltan datos numéricos para una acción, pide la información.
-                3.  **Regla de Acción Única**: Tras ejecutar una acción y devolver el JSON, considera la tarea completada. Espera una NUEVA instrucción. Si el usuario dice "gracias", responde "De nada. ¿Algo más?".
+                3.  **Regla de Acción Única**: Tras ejecutar una acción y devolver el JSON, considera la tarea completada. Espera una NUEVA instrucción.
 
                 ### LÓGICA DE DECISIONES CLAVE
                 
-                **1. Prioridad Maestra (REGLA INVIOLABLE):**
-                Al recibir un ingreso, SIEMPRE debes verificar las siguientes cuentas en este orden estricto antes de consultar la 'jerarquiaMetasActiva':
-                a. **Verificar 'colchonCaja'**: Si su saldo es menor a su meta de 20,000, TODO el ingreso debe ir aquí primero.
-                b. **Verificar 'miniFondo'**: Si 'colchonCaja' está completo, pero 'miniFondo' no ha alcanzado su meta de 20,000, el ingreso debe ir aquí.
-                c. **Consultar 'jerarquiaMetasActiva'**: SOLO si 'colchonCaja' Y 'miniFondo' están completos, procederás a asignar el dinero a la primera meta de la lista 'jerarquiaMetasActiva'.
+                **1. Prioridad Maestra y Lógica de Desbordamiento (REGLA INVIOLABLE):**
+                Al recibir un ingreso, SIEMPRE debes procesarlo siguiendo estos pasos exactos:
+                a. **Calcular faltante y asignar a 'colchonCaja'**: Calcula cuánto falta para la meta de 20,000. Asigna solo la cantidad necesaria del ingreso. No superes la meta.
+                b. **Calcular sobrante y asignar a 'miniFondo'**: Si después del paso (a) sobra dinero del ingreso, repite el proceso para 'miniFondo'. Calcula cuánto falta para su meta de 20,000 y asigna solo esa cantidad.
+                c. **Desbordamiento a 'jerarquiaMetasActiva'**: Si después de los pasos (a) y (b) AÚN sobra dinero, consulta la lista 'jerarquiaMetasActiva'. Asigna el sobrante a la primera meta de esa lista, calculando el faltante para no superar su meta. Si la completas y sigue sobrando dinero, pasa a la siguiente meta en la lista.
+                d. **Sobrante final**: Si después de todo el proceso aún queda dinero, súmalo a la 'cuentaCorriente'.
 
                 **2. Protocolos de Creación:**
-                - **PCM (Crear Meta)**: Si el usuario quiere 'crear una nueva meta de ahorro', pide 'nombre' y 'monto'. Luego, añade un nuevo objeto a 'sinkingFunds'. Informa que la "meta fue creada".
-                - **PRD (Registrar Deuda)**: Si el usuario quiere 'registrar una nueva deuda', pide 'acreedor', 'saldo', 'pago mensual' y 'tipo'. Luego, añade un nuevo objeto a 'deudas'. Informa que la "deuda fue registrada".
+                - **PCM (Crear Meta)**: Si el usuario quiere 'crear una nueva meta de ahorro', pide 'nombre' y 'monto'. Añade un nuevo objeto a 'sinkingFunds'.
+                - **PRD (Registrar Deuda)**: Si el usuario quiere 'registrar una nueva deuda', pide 'acreedor', 'saldo', 'pago mensual' y 'tipo'. Añade un nuevo objeto a 'deudas'.
                 
                 **3. Protocolos de Emergencia:**
                 - **PE-4 (Médico > $10k)**: SÍ usar 'miniFondo' y 'fondo6m'.
-                - **PE-5 (Herramienta > $5k)**: NO usar fondos existentes. Pausar meta activa y crear NUEVO sinking fund como prioridad #1.
+                - **PE-5 (Herramienta > $5k)**: NO usar fondos existentes. Pausar meta activa y crear NUEVO sinking fund.
 
                 Tu tono es profesional y directo.
             `;
