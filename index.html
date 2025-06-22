@@ -32,6 +32,11 @@
             background-color: #e5e7eb;
             color: #1f2937;
         }
+        .chat-bubble-error {
+            background-color: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
         .status-card {
             background-color: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -99,6 +104,10 @@
     <script>
         // --- 1. ESTADO INICIAL Y CONFIGURACIÓN ---
         
+        // **ACCIÓN REQUERIDA**: Pega tu clave API de Gemini aquí.
+        // Puedes obtener una clave gratuita en Google AI Studio.
+        const GEMINI_API_KEY = "AIzaSyB04aZK2GwiyRAAV5lrfczaM9Lx9iMV-wU";
+
         let financialState = {
             "ultimaActualizacion": "2025-06-22T09:00:00Z",
             "cuentas": {
@@ -190,12 +199,18 @@
             financialStatusContainer.innerHTML += deudasHtml;
         }
 
-        function addMessageToChat(message, sender) {
+        function addMessageToChat(message, sender, type = 'ai') {
             const messageDiv = document.createElement('div');
             messageDiv.className = `w-full flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
             
             const bubble = document.createElement('div');
-            bubble.className = `max-w-lg lg:max-w-xl p-3 rounded-lg my-1 chat-bubble-${sender}`;
+            let bubbleClass = 'chat-bubble-ai';
+            if (sender === 'user') {
+                bubbleClass = 'chat-bubble-user';
+            } else if (type === 'error') {
+                bubbleClass = 'chat-bubble-error';
+            }
+            bubble.className = `max-w-lg lg:max-w-xl p-3 rounded-lg my-1 ${bubbleClass}`;
             bubble.innerText = message;
             
             messageDiv.appendChild(bubble);
@@ -204,6 +219,15 @@
         }
 
         async function handleUserInput() {
+            if (!GEMINI_API_KEY || GEMINI_API_KEY === "PEGA_TU_API_KEY_DE_GEMINI_AQUI") {
+                addMessageToChat(
+                    "Error de configuración: Falta la clave API de Gemini. Por favor, edita el archivo index.html y añade tu clave donde se indica.",
+                    "ai",
+                    "error"
+                );
+                return;
+            }
+
             const query = userInput.value.trim();
             if (!query) return;
 
@@ -227,8 +251,7 @@
                     system_instruction: systemInstruction
                 };
 
-                const apiKey = ""; 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -239,7 +262,7 @@
                 if (!response.ok) {
                     const errorBody = await response.json().catch(() => ({}));
                     console.error("Error Body from API:", errorBody);
-                    throw new Error(`Error de la API: ${response.status} ${response.statusText}. ${errorBody?.error?.message || 'No hay detalles adicionales.'}`);
+                    throw new Error(`Error de la API: ${response.status} ${response.statusText}. ${errorBody?.error?.message || 'Revisa que tu clave API sea correcta.'}`);
                 }
 
                 const result = await response.json();
@@ -252,13 +275,13 @@
                     processAIResponse(responseText);
 
                 } else {
-                    addMessageToChat("Lo siento, no pude procesar la respuesta de la IA. La respuesta no tuvo el formato esperado. Por favor, intenta de nuevo.", 'ai');
+                    addMessageToChat("Lo siento, no pude procesar la respuesta de la IA. La respuesta no tuvo el formato esperado. Por favor, intenta de nuevo.", "ai", "error");
                     console.error("Respuesta inesperada de la API:", result);
                 }
 
             } catch (error) {
                 console.error('Error al contactar a la API de Gemini:', error);
-                addMessageToChat(`Ocurrió un error: ${error.message}. Revisa la consola para más detalles.`, 'ai');
+                addMessageToChat(`Ocurrió un error: ${error.message}. Revisa la consola para más detalles.`, "ai", "error");
             } finally {
                 userInput.disabled = false;
                 sendButton.disabled = false;
@@ -291,11 +314,7 @@
             addMessageToChat(chatMessage, 'ai');
         }
 
-        /**
-         * Construye el prompt del sistema basado en los manuales proporcionados.
-         */
         function buildSystemPrompt() {
-            // **CORRECCIÓN CLAVE**: Se blindan las reglas de emergencia.
             return `
                 Eres un asistente financiero personal para un usuario llamado Luis. Tu comportamiento se rige ESTRICTAMENTE por las siguientes reglas. Eres disciplinado, preciso y te basas en los datos proporcionados. Analiza el historial de chat para entender el contexto completo antes de responder.
 
