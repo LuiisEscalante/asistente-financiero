@@ -15,9 +15,8 @@
         .quote-banner {
             transition: opacity 0.5s ease-in-out;
         }
-        /* Para que el contenido principal tenga scroll y el header sea fijo */
         .main-content {
-            height: calc(100vh - 8rem); /* Ajusta este valor si el header cambia de tamaño */
+            height: calc(100vh - 8rem); 
         }
     </style>
 </head>
@@ -30,14 +29,14 @@
                 </svg>
             </a>
             <h1 class="text-xl font-bold text-white">Historial</h1>
-            <div class="w-6"></div> <!-- Espaciador para centrar el título -->
+            <div class="w-6"></div> 
         </div>
     </header>
 
     <main class="flex-1 overflow-y-auto">
         <div class="max-w-4xl mx-auto p-4">
-            <div id="quote-banner" class="quote-banner bg-gray-800/50 border border-blue-500/20 p-4 rounded-xl mb-6 text-center shadow-lg">
-                <p id="quote-text" class="text-base italic text-gray-300"></p>
+            <div id="quote-banner" class="quote-banner bg-gray-800/50 border border-blue-500/20 p-4 rounded-xl mb-6 text-center shadow-lg min-h-[6rem] flex items-center justify-center">
+                <p id="quote-text" class="text-base italic text-gray-300">Generando frase inspiradora...</p>
             </div>
             
             <div class="mb-6">
@@ -50,12 +49,10 @@
             </div>
 
             <div id="transactions-list" class="space-y-6">
-                <!-- Las transacciones agrupadas por fecha se renderizarán aquí -->
             </div>
         </div>
     </main>
     
-    <!-- MODAL DE CONFIRMACIÓN PARA BORRAR -->
     <div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
         <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm">
             <h3 class="text-lg font-bold text-white">Confirmar Eliminación</h3>
@@ -79,11 +76,12 @@
           messagingSenderId: "1042510262841",
           appId: "1:1042510262841:web:46a4a02d88c3cc1523d3e8"
         };
+        const GEMINI_API_KEY = "AIzaSyB04aZK2GwiyRAAV5lrfczaM9Lx9iMV-wU";
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
         // --- REFERENCIAS A ELEMENTOS UI ---
-        const quotes = [ "La ansiedad financiera es una falla de diseño, no de carácter.", "En lugar de depender de la fuerza de voluntad, debemos construir estructuras.", "El propósito último de la riqueza es obtener control y autonomía sobre tu tiempo.", "Los buenos hábitos financieros no se fuerzan, emergen naturalmente del sistema.", "La libertad financiera se trata de tomar unas pocas decisiones excelentes.", "La resiliencia no es un rasgo abstracto, es una capacidad que se construye."];
         const quoteText = document.getElementById('quote-text');
         const quoteBanner = document.getElementById('quote-banner');
         const transactionsList = document.getElementById('transactions-list');
@@ -92,139 +90,111 @@
         const deleteModal = document.getElementById('delete-modal');
         const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
         const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-        let currentQuoteIndex = 0;
         let transactionToDeleteId = null;
+        let currentQuoteIndex = 0;
 
         // --- FUNCIONES ---
 
-        function showNextQuote() {
-            if (!quoteBanner || !quoteText) return;
-            quoteBanner.style.opacity = 0;
-            setTimeout(() => {
-                currentQuoteIndex = (currentQuoteIndex + 1) % quotes.length;
-                quoteText.innerText = `"${quotes[currentQuoteIndex]}"`;
-                quoteBanner.style.opacity = 1;
-            }, 500);
-        }
+        async function fetchAndDisplayDynamicQuote() {
+            if (!quoteBanner || !quoteText || !GEMINI_API_KEY || GEMINI_API_KEY === "PEGA_TU_API_KEY_DE_GEMINI_AQUI") {
+                 quoteText.innerText = "La soberanía financiera puede ser diseñada.";
+                 return;
+            }
+            
+            const prompt = "Genera una frase corta y motivacional (máximo 20 palabras) sobre finanzas personales. Debe inspirar disciplina, control y la idea de que un buen sistema financiero reduce el estrés. Sé directo y poderoso.";
+            
+            try {
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error('Error en la respuesta de la API de frases.');
 
+                const result = await response.json();
+                const newQuote = result.candidates[0].content.parts[0].text.replace(/"/g, ''); // Limpiar comillas
+
+                quoteBanner.style.opacity = 0;
+                setTimeout(() => {
+                    quoteText.innerText = newQuote;
+                    quoteBanner.style.opacity = 1;
+                }, 500);
+
+            } catch (error) {
+                console.error("Error al generar frase:", error);
+                const quotes = [ "La ansiedad financiera es una falla de diseño, no de carácter.", "En lugar de depender de la fuerza de voluntad, debemos construir estructuras.", "El propósito último de la riqueza es obtener control y autonomía sobre tu tiempo.", "Los buenos hábitos financieros no se fuerzan, emergen naturalmente del sistema.", "La libertad financiera se trata de tomar unas pocas decisiones excelentes.", "La resiliencia no es un rasgo abstracto, es una capacidad que se construye."];
+                quoteText.innerText = quotes[Math.floor(Math.random() * quotes.length)];
+            }
+        }
+        
         function getTransactionVisuals(type, amount) {
             if (type === 'income' || (amount && amount > 0)) {
                 return {
                     icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`,
-                    color: 'text-green-400',
-                    bgColor: 'bg-green-500/10'
-                };
+                    color: 'text-green-400', bgColor: 'bg-green-500/10' };
             }
             if (type === 'expense' || (amount && amount < 0)) {
                  return {
                     icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`,
-                    color: 'text-red-400',
-                    bgColor: 'bg-red-500/10'
-                };
+                    color: 'text-red-400', bgColor: 'bg-red-500/10' };
             }
             return {
                 icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`,
-                color: 'text-blue-400',
-                bgColor: 'bg-blue-500/10'
-            };
+                color: 'text-blue-400', bgColor: 'bg-blue-500/10' };
         }
-
         async function fetchAndDisplayTransactions(filterDate = null) {
             transactionsList.innerHTML = '';
             loadingMessage.style.display = 'block';
             loadingMessage.innerText = 'Cargando historial...';
-
             try {
                 let q;
                 if (filterDate) {
-                    const startOfDay = new Date(filterDate);
-                    startOfDay.setUTCHours(0, 0, 0, 0);
-                    const endOfDay = new Date(filterDate);
-                    endOfDay.setUTCHours(23, 59, 59, 999);
+                    const startOfDay = new Date(filterDate); startOfDay.setUTCHours(0, 0, 0, 0);
+                    const endOfDay = new Date(filterDate); endOfDay.setUTCHours(23, 59, 59, 999);
                     q = query(collection(db, "transactions"), where("date", ">=", startOfDay), where("date", "<=", endOfDay), orderBy("date", "desc"));
                 } else {
                     q = query(collection(db, "transactions"), orderBy("date", "desc"));
                 }
-                
                 const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    loadingMessage.innerText = "No se encontraron transacciones para esta selección.";
-                    return;
-                }
+                if (querySnapshot.empty) { loadingMessage.innerText = "No se encontraron transacciones para esta selección."; return; }
                 loadingMessage.style.display = 'none';
-                
                 const groupedTransactions = {};
                 querySnapshot.forEach(doc => {
                     const transaction = { id: doc.id, ...doc.data() };
                     const date = transaction.date.toDate().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
-                    if (!groupedTransactions[date]) {
-                        groupedTransactions[date] = [];
-                    }
+                    if (!groupedTransactions[date]) { groupedTransactions[date] = []; }
                     groupedTransactions[date].push(transaction);
                 });
-
                 const today = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
                 const yesterdayStr = yesterday.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
-
                 for (const dateKey in groupedTransactions) {
                     let dateLabel = dateKey;
                     if (dateKey === today) dateLabel = "Hoy";
                     if (dateKey === yesterdayStr) dateLabel = "Ayer";
-
                     let groupHtml = `<div class="date-group"><h2 class="text-lg font-semibold text-gray-400 mb-3">${dateLabel}</h2><div class="space-y-3">`;
-                    
                     groupedTransactions[dateKey].forEach(transaction => {
                         const time = transaction.date.toDate().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                         const visuals = getTransactionVisuals(transaction.type, transaction.amount);
                         const amount = transaction.amount || 0;
-
-                        groupHtml += `
-                            <div id="txn-${transaction.id}" class="bg-gray-800/50 p-4 rounded-xl flex items-center space-x-4">
-                                <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${visuals.bgColor} ${visuals.color}">
-                                   ${visuals.icon}
-                                </div>
-                                <div class="flex-grow min-w-0">
-                                    <p class="font-medium text-white truncate">${transaction.description || 'Sin descripción'}</p>
-                                    <p class="text-sm text-gray-500">${time}</p>
-                                </div>
-                                <div class="text-right flex items-center gap-2">
-                                     <span class="text-base font-bold ${visuals.color}">
-                                        ${amount > 0 ? '+' : ''}${amount.toLocaleString('es-ES', {style: 'currency', currency: 'MXN'})}
-                                     </span>
-                                     <button data-id="${transaction.id}" class="delete-btn text-gray-600 hover:text-red-400 p-1 rounded-full flex-shrink-0">
-                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
-                                    </button>
-                                </div>
-                            </div>
-                        `;
+                        groupHtml += `<div id="txn-${transaction.id}" class="bg-gray-800/50 p-4 rounded-xl flex items-center space-x-4"><div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${visuals.bgColor} ${visuals.color}">${visuals.icon}</div><div class="flex-grow min-w-0"><p class="font-medium text-white truncate">${transaction.description || 'Sin descripción'}</p><p class="text-sm text-gray-500">${time}</p></div><div class="text-right flex items-center gap-2"><span class="text-base font-bold ${visuals.color}">${amount > 0 ? '+' : ''}${amount.toLocaleString('es-ES', {style: 'currency', currency: 'MXN'})}</span><button data-id="${transaction.id}" class="delete-btn text-gray-600 hover:text-red-400 p-1 rounded-full flex-shrink-0"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg></button></div></div>`;
                     });
-                    
                     groupHtml += `</div></div>`;
                     transactionsList.innerHTML += groupHtml;
                 }
-
                 document.querySelectorAll('.delete-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        transactionToDeleteId = button.dataset.id;
-                        deleteModal.style.display = 'flex';
+                        e.stopPropagation(); transactionToDeleteId = button.dataset.id; deleteModal.style.display = 'flex';
                     });
                 });
-
             } catch (error) {
                 console.error("Error al cargar transacciones:", error);
                 loadingMessage.innerText = `Error al cargar el historial: ${error.message}`;
             }
         }
-        
-        cancelDeleteBtn.addEventListener('click', () => {
-            transactionToDeleteId = null;
-            deleteModal.style.display = 'none';
-        });
-
+        cancelDeleteBtn.addEventListener('click', () => { transactionToDeleteId = null; deleteModal.style.display = 'none'; });
         confirmDeleteBtn.addEventListener('click', async () => {
             if (!transactionToDeleteId) return;
             try {
@@ -233,24 +203,13 @@
                 if(elementToRemove) {
                     const parentGroup = elementToRemove.parentElement;
                     elementToRemove.remove();
-                    // Si el grupo de fecha queda vacío, lo eliminamos también.
-                    if (parentGroup && !parentGroup.hasChildNodes()) {
-                        parentGroup.parentElement.remove();
-                    }
+                    if (parentGroup && parentGroup.children.length === 0) { parentGroup.parentElement.remove(); }
                 }
-                
-                transactionToDeleteId = null;
-                deleteModal.style.display = 'none';
-            } catch (error) {
-                console.error("Error al borrar la transacción: ", error);
-                alert("No se pudo borrar la transacción.");
-            }
+                transactionToDeleteId = null; deleteModal.style.display = 'none';
+            } catch (error) { alert("No se pudo borrar la transacción."); }
         });
-
         dateFilter.addEventListener('change', () => {
             if(dateFilter.value) {
-                // El input date devuelve YYYY-MM-DD. JS lo interpreta como UTC.
-                // Para evitar problemas de zona horaria, lo tratamos como tal.
                 const [year, month, day] = dateFilter.value.split('-').map(Number);
                 const selectedDate = new Date(Date.UTC(year, month - 1, day));
                 fetchAndDisplayTransactions(selectedDate);
@@ -259,9 +218,10 @@
             }
         });
 
+        // --- INICIALIZACIÓN ---
         window.onload = () => {
-            showNextQuote();
-            setInterval(showNextQuote, 10000);
+            fetchAndDisplayDynamicQuote();
+            setInterval(fetchAndDisplayDynamicQuote, 15000);
             fetchAndDisplayTransactions();
         };
 
