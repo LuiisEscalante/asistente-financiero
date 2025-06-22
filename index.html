@@ -99,9 +99,8 @@
         const GEMINI_API_KEY = "AIzaSyB04aZK2GwiyRAAV5lrfczaM9Lx9iMV-wU";
         
         const loadingOverlay = document.getElementById('loading-overlay');
-
         if (!firebaseConfig.apiKey) {
-            loadingOverlay.innerHTML = `<div class="p-4 bg-red-800 text-white rounded-lg text-center max-w-md"><h2 class="font-bold text-lg">Error de Configuración</h2><p class="mt-1">Falta la configuración de Firebase.</p></div>`;
+             loadingOverlay.innerHTML = `<div class="p-4 bg-red-800 text-white rounded-lg text-center max-w-md"><h2 class="font-bold text-lg">Error de Configuración</h2><p class="mt-1">Falta la configuración de Firebase.</p></div>`;
             throw new Error("Configuración de Firebase incompleta.");
         }
 
@@ -118,7 +117,6 @@
         const closeSidebarBtn = document.getElementById('close-sidebar-btn');
         const sidebar = document.getElementById('financial-sidebar');
         const sidebarOverlay = document.getElementById('sidebar-overlay');
-        const mainContent = document.getElementById('main-content');
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
@@ -273,6 +271,7 @@
                     financialState = newState;
                     renderFinancialStatus();
                     await saveFinancialState();
+                    
                     const diff = (newState.cuentas.corriente.saldo + (newState.cuentas.colchonCaja?.saldo || 0) + (newState.cuentas.miniFondo?.saldo || 0)) - (oldState.cuentas.corriente.saldo + (oldState.cuentas.colchonCaja?.saldo || 0) + (oldState.cuentas.miniFondo?.saldo || 0));
                     if (chatMessage.toLowerCase().includes("ingreso")) {
                         await saveTransaction(chatMessage, diff || 0, 'income');
