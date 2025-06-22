@@ -68,16 +68,24 @@
         import { getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- CONFIGURACIÓN ---
-        const firebaseConfig = {
-          apiKey: "AIzaSyA6qN_uF3ljC3MuzVgXc0IcQdNXHdYdVZQ",
-          authDomain: "asistente-financiero-de-luis.firebaseapp.com",
-          projectId: "asistente-financiero-de-luis",
-          storageBucket: "asistente-financiero-de-luis.appspot.com",
-          messagingSenderId: "1042510262841",
-          appId: "1:1042510262841:web:46a4a02d88c3cc1523d3e8"
-        };
-        // Initialize Firebase
+       // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyA6qN_uF3ljC3MuzVgXc0IcQdNXHdYdVZQ",
+  authDomain: "asistente-financiero-de-luis.firebaseapp.com",
+  projectId: "asistente-financiero-de-luis",
+  storageBucket: "asistente-financiero-de-luis.firebasestorage.app",
+  messagingSenderId: "1042510262841",
+  appId: "1:1042510262841:web:46a4a02d88c3cc1523d3e8"
+};
+
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+       
         const GEMINI_API_KEY = "AIzaSyB04aZK2GwiyRAAV5lrfczaM9Lx9iMV-wU";
         
         // ... (resto de las constantes y referencias a elementos UI) ...
