@@ -90,14 +90,23 @@
         // --- 1. CONFIGURACIÓN ---
         
         // **ACCIÓN REQUERIDA 1**: Reemplaza esto con tu objeto de configuración de Firebase.
-        const firebaseConfig = {
-            apiKey: "AIza...",
-            authDomain: "tu-proyecto.firebaseapp.com",
-            projectId: "tu-proyecto",
-            storageBucket: "tu-proyecto.appspot.com",
-            messagingSenderId: "12345...",
-            appId: "1:12345...:web:..."
-        };
+       // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyA6qN_uF3ljC3MuzVgXc0IcQdNXHdYdVZQ",
+  authDomain: "asistente-financiero-de-luis.firebaseapp.com",
+  projectId: "asistente-financiero-de-luis",
+  storageBucket: "asistente-financiero-de-luis.firebasestorage.app",
+  messagingSenderId: "1042510262841",
+  appId: "1:1042510262841:web:46a4a02d88c3cc1523d3e8"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
         
         // **ACCIÓN REQUERIDA 2**: Pega tu clave API de Gemini aquí.
         const GEMINI_API_KEY = "AIzaSyB04aZK2GwiyRAAV5lrfczaM9Lx9iMV-wU";
