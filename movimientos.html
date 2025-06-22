@@ -9,49 +9,54 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #111827;
+            background-color: #030712;
             color: #d1d5db;
         }
         .quote-banner {
             transition: opacity 0.5s ease-in-out;
         }
+        /* Para que el contenido principal tenga scroll y el header sea fijo */
+        .main-content {
+            height: calc(100vh - 8rem); /* Ajusta este valor si el header cambia de tamaño */
+        }
     </style>
 </head>
-<body class="p-4 sm:p-6 lg:p-8">
-    <div class="max-w-4xl mx-auto">
-        <!-- SECCIÓN DE FRASES MOTIVACIONALES -->
-        <div id="quote-banner" class="quote-banner bg-gray-800 border border-blue-500/30 p-4 rounded-lg mb-8 text-center shadow-lg">
-            <p id="quote-text" class="text-lg italic text-gray-300"></p>
-        </div>
-
-        <header class="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
-            <div>
-                <h1 class="text-3xl font-bold text-white">Historial de Movimientos</h1>
-                <p class="text-gray-400 mt-1">Un registro de todas tus operaciones.</p>
-            </div>
-            <a href="./index.html" class="w-full sm:w-auto px-5 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" /></svg>
-                Volver al Asistente
+<body class="h-screen overflow-hidden flex flex-col">
+    <header class="bg-[#030712]/80 backdrop-blur-sm sticky top-0 z-20 px-4 py-3 border-b border-gray-800">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <a href="./index.html" class="p-2 -ml-2 text-gray-300 rounded-full hover:bg-gray-800">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
             </a>
-        </header>
-
-        <!-- SECCIÓN DE FILTROS -->
-        <div class="mb-6 bg-gray-800 p-4 rounded-lg">
-            <label for="date-filter" class="block text-sm font-medium text-gray-300 mb-2">Filtrar por fecha:</label>
-            <input type="date" id="date-filter" class="w-full sm:w-auto bg-gray-700 border border-gray-600 rounded-lg p-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <h1 class="text-xl font-bold text-white">Historial</h1>
+            <div class="w-6"></div> <!-- Espaciador para centrar el título -->
         </div>
+    </header>
 
-        <div id="loading-message" class="text-center text-gray-400 py-10">
-            <p>Cargando historial...</p>
-        </div>
+    <main class="flex-1 overflow-y-auto">
+        <div class="max-w-4xl mx-auto p-4">
+            <div id="quote-banner" class="quote-banner bg-gray-800/50 border border-blue-500/20 p-4 rounded-xl mb-6 text-center shadow-lg">
+                <p id="quote-text" class="text-base italic text-gray-300"></p>
+            </div>
+            
+            <div class="mb-6">
+                <label for="date-filter" class="block text-sm font-medium text-gray-400 mb-1">Filtrar por fecha</label>
+                <input type="date" id="date-filter" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
 
-        <div id="transactions-list" class="space-y-3">
-            <!-- Las transacciones se renderizarán aquí -->
+            <div id="loading-message" class="text-center text-gray-500 py-10">
+                <p>Cargando historial...</p>
+            </div>
+
+            <div id="transactions-list" class="space-y-6">
+                <!-- Las transacciones agrupadas por fecha se renderizarán aquí -->
+            </div>
         </div>
-    </div>
+    </main>
     
     <!-- MODAL DE CONFIRMACIÓN PARA BORRAR -->
-    <div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center">
+    <div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
         <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm">
             <h3 class="text-lg font-bold text-white">Confirmar Eliminación</h3>
             <p class="text-gray-400 mt-2">¿Estás seguro de que quieres eliminar esta transacción? Esta acción no se puede deshacer.</p>
@@ -77,21 +82,23 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- LÓGICA PARA FRASES MOTIVACIONALES ---
-        const quotes = [
-            "La ansiedad financiera es una falla de diseño, no de carácter. La soberanía financiera puede ser diseñada.",
-            "En lugar de depender de la fuerza de voluntad, debemos construir estructuras que hagan las decisiones correctas automáticas.",
-            "El propósito último de la riqueza no es comprar más cosas, sino obtener control y autonomía sobre tu tiempo.",
-            "Los buenos hábitos financieros no se fuerzan, emergen naturalmente cuando el sistema los facilita.",
-            "La libertad financiera no se trata de tomar más decisiones, sino de tomar unas pocas decisiones excelentes de forma deliberada.",
-            "La resiliencia no es un rasgo abstracto, es una capacidad que se construye sistemáticamente."
-        ];
+        // --- REFERENCIAS A ELEMENTOS UI ---
+        const quotes = [ "La ansiedad financiera es una falla de diseño, no de carácter.", "En lugar de depender de la fuerza de voluntad, debemos construir estructuras.", "El propósito último de la riqueza es obtener control y autonomía sobre tu tiempo.", "Los buenos hábitos financieros no se fuerzan, emergen naturalmente del sistema.", "La libertad financiera se trata de tomar unas pocas decisiones excelentes.", "La resiliencia no es un rasgo abstracto, es una capacidad que se construye."];
         const quoteText = document.getElementById('quote-text');
         const quoteBanner = document.getElementById('quote-banner');
+        const transactionsList = document.getElementById('transactions-list');
+        const loadingMessage = document.getElementById('loading-message');
+        const dateFilter = document.getElementById('date-filter');
+        const deleteModal = document.getElementById('delete-modal');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
         let currentQuoteIndex = 0;
+        let transactionToDeleteId = null;
+
+        // --- FUNCIONES ---
 
         function showNextQuote() {
-            if(!quoteBanner || !quoteText) return;
+            if (!quoteBanner || !quoteText) return;
             quoteBanner.style.opacity = 0;
             setTimeout(() => {
                 currentQuoteIndex = (currentQuoteIndex + 1) % quotes.length;
@@ -99,38 +106,24 @@
                 quoteBanner.style.opacity = 1;
             }, 500);
         }
-        showNextQuote();
-        setInterval(showNextQuote, 10000); // Cambia la frase cada 10 segundos
 
-
-        // --- LÓGICA PARA TRANSACCIONES (CON FILTRO Y BORRADO) ---
-        const transactionsList = document.getElementById('transactions-list');
-        const loadingMessage = document.getElementById('loading-message');
-        const dateFilter = document.getElementById('date-filter');
-        const deleteModal = document.getElementById('delete-modal');
-        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
-        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-        let transactionToDeleteId = null;
-
-        // **FIX**: La función getTransactionVisuals estaba faltando en el script anterior.
         function getTransactionVisuals(type, amount) {
             if (type === 'income' || (amount && amount > 0)) {
                 return {
-                    icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01"/></svg>`,
+                    icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`,
                     color: 'text-green-400',
                     bgColor: 'bg-green-500/10'
                 };
             }
             if (type === 'expense' || (amount && amount < 0)) {
                  return {
-                    icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v.01"/></svg>`,
+                    icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`,
                     color: 'text-red-400',
                     bgColor: 'bg-red-500/10'
                 };
             }
-            // Por defecto para 'creation' o tipos neutros
             return {
-                icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l-4 4-4-4 4-4"/></svg>`,
+                icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`,
                 color: 'text-blue-400',
                 bgColor: 'bg-blue-500/10'
             };
@@ -161,35 +154,57 @@
                 }
                 loadingMessage.style.display = 'none';
                 
-                querySnapshot.forEach((doc) => {
-                    const transaction = doc.data();
-                    const transactionId = doc.id;
-                    const date = transaction.date ? transaction.date.toDate().toLocaleString('es-ES', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Fecha no disponible';
-                    const visuals = getTransactionVisuals(transaction.type, transaction.amount);
-                    
-                    const transactionElement = document.createElement('div');
-                    transactionElement.className = 'bg-gray-800 p-4 rounded-lg flex items-center space-x-4';
-                    transactionElement.id = `txn-${transactionId}`;
-                    
-                    const amount = transaction.amount || 0;
-                    
-                    transactionElement.innerHTML = `
-                        <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${visuals.bgColor} ${visuals.color}">
-                           ${visuals.icon}
-                        </div>
-                        <div class="flex-grow">
-                            <p class="font-semibold text-white">${transaction.description || 'Sin descripción'}</p>
-                            <p class="text-sm text-gray-400">${date}</p>
-                        </div>
-                        <div class="text-lg font-bold ${visuals.color} text-right mr-4">
-                            ${amount > 0 ? '+' : ''}${amount.toLocaleString('es-ES', {style: 'currency', currency: 'MXN'})}
-                        </div>
-                        <button data-id="${transactionId}" class="delete-btn text-gray-500 hover:text-red-400 p-2 rounded-full hover:bg-red-500/10">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
-                        </button>
-                    `;
-                    transactionsList.appendChild(transactionElement);
+                const groupedTransactions = {};
+                querySnapshot.forEach(doc => {
+                    const transaction = { id: doc.id, ...doc.data() };
+                    const date = transaction.date.toDate().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+                    if (!groupedTransactions[date]) {
+                        groupedTransactions[date] = [];
+                    }
+                    groupedTransactions[date].push(transaction);
                 });
+
+                const today = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = yesterday.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+
+                for (const dateKey in groupedTransactions) {
+                    let dateLabel = dateKey;
+                    if (dateKey === today) dateLabel = "Hoy";
+                    if (dateKey === yesterdayStr) dateLabel = "Ayer";
+
+                    let groupHtml = `<div class="date-group"><h2 class="text-lg font-semibold text-gray-400 mb-3">${dateLabel}</h2><div class="space-y-3">`;
+                    
+                    groupedTransactions[dateKey].forEach(transaction => {
+                        const time = transaction.date.toDate().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                        const visuals = getTransactionVisuals(transaction.type, transaction.amount);
+                        const amount = transaction.amount || 0;
+
+                        groupHtml += `
+                            <div id="txn-${transaction.id}" class="bg-gray-800/50 p-4 rounded-xl flex items-center space-x-4">
+                                <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${visuals.bgColor} ${visuals.color}">
+                                   ${visuals.icon}
+                                </div>
+                                <div class="flex-grow min-w-0">
+                                    <p class="font-medium text-white truncate">${transaction.description || 'Sin descripción'}</p>
+                                    <p class="text-sm text-gray-500">${time}</p>
+                                </div>
+                                <div class="text-right flex items-center gap-2">
+                                     <span class="text-base font-bold ${visuals.color}">
+                                        ${amount > 0 ? '+' : ''}${amount.toLocaleString('es-ES', {style: 'currency', currency: 'MXN'})}
+                                     </span>
+                                     <button data-id="${transaction.id}" class="delete-btn text-gray-600 hover:text-red-400 p-1 rounded-full flex-shrink-0">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    groupHtml += `</div></div>`;
+                    transactionsList.innerHTML += groupHtml;
+                }
 
                 document.querySelectorAll('.delete-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
@@ -215,7 +230,14 @@
             try {
                 await deleteDoc(doc(db, "transactions", transactionToDeleteId));
                 const elementToRemove = document.getElementById(`txn-${transactionToDeleteId}`);
-                if(elementToRemove) elementToRemove.remove();
+                if(elementToRemove) {
+                    const parentGroup = elementToRemove.parentElement;
+                    elementToRemove.remove();
+                    // Si el grupo de fecha queda vacío, lo eliminamos también.
+                    if (parentGroup && !parentGroup.hasChildNodes()) {
+                        parentGroup.parentElement.remove();
+                    }
+                }
                 
                 transactionToDeleteId = null;
                 deleteModal.style.display = 'none';
@@ -227,15 +249,22 @@
 
         dateFilter.addEventListener('change', () => {
             if(dateFilter.value) {
+                // El input date devuelve YYYY-MM-DD. JS lo interpreta como UTC.
+                // Para evitar problemas de zona horaria, lo tratamos como tal.
                 const [year, month, day] = dateFilter.value.split('-').map(Number);
-                const selectedDate = new Date(year, month - 1, day);
+                const selectedDate = new Date(Date.UTC(year, month - 1, day));
                 fetchAndDisplayTransactions(selectedDate);
             } else {
                 fetchAndDisplayTransactions();
             }
         });
 
-        window.onload = () => fetchAndDisplayTransactions();
+        window.onload = () => {
+            showNextQuote();
+            setInterval(showNextQuote, 10000);
+            fetchAndDisplayTransactions();
+        };
+
     </script>
 </body>
 </html>
