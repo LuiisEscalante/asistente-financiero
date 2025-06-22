@@ -9,55 +9,47 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #111827; /* bg-gray-900 */
-            color: #d1d5db; /* text-gray-300 */
+            background-color: #030712; /* Gris casi negro para un look premium */
+            color: #e5e7eb; /* Texto un poco más claro */
         }
-        #chat-container::-webkit-scrollbar { width: 8px; }
-        #chat-container::-webkit-scrollbar-track { background: #1f2937; } /* bg-gray-800 */
-        #chat-container::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; } /* bg-gray-600 */
-        #chat-container::-webkit-scrollbar-thumb:hover { background: #6b7280; } /* bg-gray-500 */
+        #chat-container::-webkit-scrollbar, #financial-sidebar::-webkit-scrollbar { width: 8px; }
+        #chat-container::-webkit-scrollbar-track, #financial-sidebar::-webkit-scrollbar-track { background: #111827; }
+        #chat-container::-webkit-scrollbar-thumb, #financial-sidebar::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+        #chat-container::-webkit-scrollbar-thumb:hover, #financial-sidebar::-webkit-scrollbar-thumb:hover { background: #4b5563; }
         
-        #financial-sidebar::-webkit-scrollbar { width: 8px; }
-        #financial-sidebar::-webkit-scrollbar-track { background: #1f2937; }
-        #financial-sidebar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
-        
-        .chat-bubble-user { background-color: #2563eb; color: white; } /* bg-blue-600 */
-        .chat-bubble-ai { background-color: #374151; color: #f9fafb; } /* bg-gray-700, text-gray-50 */
+        .chat-bubble-user { background: linear-gradient(to right, #3b82f6, #60a5fa); color: white; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2); }
+        .chat-bubble-ai { background-color: #1f2937; color: #f9fafb; }
         .chat-bubble-error { background-color: #4c1d1d; color: #fecaca; border: 1px solid #7f1d1d;}
         
-        .status-card { background-color: #1f2937; border: 1px solid #374151; }
-        .status-title { color: #f9fafb; }
+        .status-card { background-color: #111827; border: 1px solid #1f2937; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .status-title { color: #f9fafb; font-weight: 600; }
         .status-value { color: #d1d5db; }
-        .status-value.positive { color: #4ade80; } /* green-400 */
-        .status-value.negative { color: #f87171; } /* red-400 */
+        .status-value.positive { color: #4ade80; }
+        .status-value.negative { color: #f87171; }
 
         .loader { width: 24px; height: 24px; border: 3px solid #374151; border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 10px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        .loading-overlay { position: fixed; inset: 0; background-color: rgba(17, 24, 39, 0.9); z-index: 50; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
+        .loading-overlay { position: fixed; inset: 0; background-color: rgba(3, 7, 18, 0.9); z-index: 50; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
     </style>
 </head>
 <body class="h-screen overflow-hidden">
     
-    <!-- Sidebar Ocultable para el Estado Financiero -->
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden"></div>
-    <aside id="financial-sidebar" class="fixed top-0 left-0 z-40 w-80 h-screen bg-gray-900 border-r border-gray-700 p-4 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out overflow-y-auto">
-        <div class="flex justify-between items-center mb-4">
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-60 z-30 hidden lg:hidden"></div>
+    <aside id="financial-sidebar" class="fixed top-0 left-0 z-40 w-80 h-screen bg-[#030712] border-r border-gray-800 p-4 transform lg:translate-x-0 -translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold text-white">Estado Financiero</h2>
             <button id="close-sidebar-btn" class="text-gray-400 hover:text-white lg:hidden">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
-        <div id="financial-status" class="space-y-4 h-[calc(100%-4rem)]">
-            <!-- El contenido financiero se renderizará aquí -->
-        </div>
+        <div id="financial-status" class="space-y-4 h-[calc(100%-4rem)]"></div>
     </aside>
 
-    <!-- Contenido Principal (Chat) -->
     <div id="main-content" class="flex flex-col h-screen lg:ml-80 transition-all duration-300 ease-in-out">
-        <header class="flex items-center p-4 bg-gray-900 border-b border-gray-800">
-            <button id="menu-btn" class="p-2 mr-4 text-gray-400 rounded-lg hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        <header class="flex items-center p-4 bg-[#030712] border-b border-gray-800 shadow-md">
+            <button id="menu-btn" class="p-2 mr-4 text-gray-400 rounded-lg hover:bg-gray-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <h1 class="text-xl font-semibold text-white">Asistente Financiero</h1>
         </header>
@@ -69,10 +61,17 @@
             <span class="text-gray-400">El asistente está pensando...</span>
         </div>
         
-        <footer class="p-4 bg-gray-900 border-t border-gray-800">
-            <div class="flex items-center space-x-4">
-                <input type="text" id="user-input" class="flex-1 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Escribe tu consulta aquí...">
-                <button id="send-button" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500 disabled:bg-gray-500">Enviar</button>
+        <footer class="p-4 bg-[#030712] border-t border-gray-800">
+            <div class="relative">
+                <input type="text" id="user-input" class="w-full p-4 pr-16 bg-gray-800 border border-gray-700 rounded-full text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Escribe tu consulta aquí...">
+                <button id="send-button" class="absolute inset-y-0 right-0 flex items-center justify-center w-12 h-12 m-1.5 bg-blue-600 text-white font-semibold rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 disabled:bg-gray-600">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M3.105 2.289a.75.75 0 00-.826.95l1.414 4.949a.75.75 0 00.95.826L11.25 9.25l-7.557-1.259a.75.75 0 00-.95.826l1.414 4.949a.75.75 0 00.95.826l3.296-1.099a.75.75 0 000-1.39l-3.296-1.099a.75.75 0 00-.95.826l1.414 4.949a.75.75 0 00.95.826L15.75 12.25l-13.9-2.316a.75.75 0 00-.745.24l-2.25 2.25a.75.75 0 000 1.06l2.25 2.25a.75.75 0 00.745.24l13.9-2.316a.75.75 0 00.518-1.033L3.105 2.289z"></path></svg>
+                </button>
+            </div>
+            <div class="mt-3 flex justify-center">
+                <a href="./movimientos.html" class="px-5 py-2 bg-gray-800 text-sm text-gray-400 rounded-full hover:bg-gray-700 transition-colors shadow-sm">
+                    Ver Historial de Movimientos
+                </a>
             </div>
         </footer>
     </div>
@@ -82,14 +81,12 @@
         <p class="text-gray-300">Cargando datos desde la base de datos...</p>
     </div>
 
-    <!-- Firebase y Lógica de la App -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- 1. CONFIGURACIÓN ---
         
-        // **ACCIÓN REQUERIDA 1**: ¡TU CONFIGURACIÓN DE FIREBASE YA ESTÁ AQUÍ!
         const firebaseConfig = {
           apiKey: "AIzaSyA6qN_uF3ljC3MuzVgXc0IcQdNXHdYdVZQ",
           authDomain: "asistente-financiero-de-luis.firebaseapp.com",
@@ -99,7 +96,6 @@
           appId: "1:1042510262841:web:46a4a02d88c3cc1523d3e8"
         };
         
-        // **ACCIÓN REQUERIDA 2**: Pega tu clave API de Gemini aquí.
         const GEMINI_API_KEY = "AIzaSyB04aZK2GwiyRAAV5lrfczaM9Lx9iMV-wU";
         
         const loadingOverlay = document.getElementById('loading-overlay');
@@ -108,7 +104,6 @@
             loadingOverlay.innerHTML = `<div class="p-4 bg-red-800 text-white rounded-lg text-center max-w-md">
                 <h2 class="font-bold text-lg">Error de Configuración</h2>
                 <p class="mt-1">Falta la configuración de Firebase en el archivo <strong>index.html</strong>.</p>
-                <p class="mt-2 text-sm">Por favor, edita el archivo en GitHub y reemplaza el objeto 'firebaseConfig' con el tuyo.</p>
             </div>`;
             throw new Error("Configuración de Firebase incompleta.");
         }
@@ -120,6 +115,7 @@
         let financialState = {};
         let chatHistory = [];
         const dbDocRef = doc(db, "financialData", "luisState");
+        const transactionsCollectionRef = collection(db, "transactions");
 
         const menuBtn = document.getElementById('menu-btn');
         const closeSidebarBtn = document.getElementById('close-sidebar-btn');
@@ -152,16 +148,13 @@
         async function loadOrCreateInitialData() {
             try {
                 const docSnap = await getDoc(dbDocRef);
-                if (docSnap.exists()) {
-                    financialState = docSnap.data();
-                } else {
-                    console.log("No se encontró documento, creando uno nuevo con estado inicial.");
+                if (docSnap.exists()) { financialState = docSnap.data(); } 
+                else {
                     await setDoc(dbDocRef, initialState);
                     financialState = initialState;
                 }
             } catch (error) {
-                console.error("Error al cargar o crear datos:", error);
-                addMessageToChat(`Error al conectar con la base de datos: ${error.message}. Usando datos locales.`, "ai", "error");
+                addMessageToChat(`Error al conectar con la base de datos: ${error.message}.`, "ai", "error");
                 financialState = initialState;
             } finally {
                 renderFinancialStatus();
@@ -176,30 +169,25 @@
         async function saveFinancialState() {
             try {
                 await setDoc(dbDocRef, financialState);
-                console.log("Estado guardado en Firestore exitosamente.");
             } catch (error) {
-                console.error("Error al guardar el estado en Firestore:", error);
-                addMessageToChat(`Hubo un error al guardar tu información en la base de datos: ${error.message}`, "ai", "error");
+                addMessageToChat(`Hubo un error al guardar tu información: ${error.message}`, "ai", "error");
+            }
+        }
+        
+        async function saveTransaction(description, amount, type) {
+            try {
+                await addDoc(transactionsCollectionRef, { description, amount, type, date: serverTimestamp() });
+            } catch (error) {
+                console.error("Error al guardar la transacción:", error);
             }
         }
         
         function renderFinancialStatus() {
-             financialStatusContainer.innerHTML = ''; 
+            financialStatusContainer.innerHTML = ''; 
             let accountsHtml = '<div class="status-card rounded-lg p-4"><h3 class="text-lg font-semibold mb-2 status-title">Cuentas Principales</h3><div class="space-y-3">';
             for (const [key, value] of Object.entries(financialState.cuentas)) {
                 const progress = value.meta ? (value.saldo / value.meta * 100).toFixed(0) : -1;
-                accountsHtml += `
-                    <div class="text-sm">
-                        <div class="flex justify-between mb-1">
-                            <span class="font-medium capitalize status-value">${key.replace(/([A-Z])/g, ' $1')}</span>
-                            <span class="font-bold status-value positive">$${value.saldo.toLocaleString()}</span>
-                        </div>
-                        ${progress !== -1 ? `
-                        <div class="w-full bg-gray-700 rounded-full h-2">
-                            <div class="bg-green-500 h-2 rounded-full" style="width: ${progress}%"></div>
-                        </div>` : ''}
-                    </div>
-                `;
+                accountsHtml += `<div class="text-sm"><div class="flex justify-between mb-1"><span class="font-medium capitalize status-value">${key.replace(/([A-Z])/g, ' $1')}</span><span class="font-bold status-value positive">$${value.saldo.toLocaleString()}</span></div>${progress !== -1 ? `<div class="w-full bg-gray-800 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full" style="width: ${progress}%"></div></div>` : ''}</div>`;
             }
             accountsHtml += '</div></div>';
             financialStatusContainer.innerHTML += accountsHtml;
@@ -207,29 +195,14 @@
             let sinkingFundsHtml = '<div class="status-card rounded-lg p-4"><h3 class="text-lg font-semibold mb-2 status-title">Sinking Funds (Metas)</h3><div class="space-y-3">';
             financialState.sinkingFunds.forEach(fund => {
                 const progress = (fund.saldo / fund.meta * 100).toFixed(0);
-                sinkingFundsHtml += `
-                    <div class="text-sm">
-                        <div class="flex justify-between mb-1">
-                             <span class="font-medium status-value">${fund.nombre}</span>
-                             <span class="font-bold status-value positive">$${fund.saldo.toLocaleString()} / $${fund.meta.toLocaleString()}</span>
-                        </div>
-                        <div class="w-full bg-gray-700 rounded-full h-2">
-                            <div class="bg-blue-500 h-2 rounded-full" style="width: ${progress}%"></div>
-                        </div>
-                    </div>
-                `;
+                sinkingFundsHtml += `<div class="text-sm"><div class="flex justify-between mb-1"><span class="font-medium status-value">${fund.nombre}</span><span class="font-bold status-value positive">$${fund.saldo.toLocaleString()} / $${fund.meta.toLocaleString()}</span></div><div class="w-full bg-gray-800 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: ${progress}%"></div></div></div>`;
             });
             sinkingFundsHtml += '</div></div>';
             financialStatusContainer.innerHTML += sinkingFundsHtml;
             
             let deudasHtml = '<div class="status-card rounded-lg p-4"><h3 class="text-lg font-semibold mb-2 status-title">Deudas Vigentes</h3><div class="space-y-2">';
             financialState.deudas.forEach(deuda => {
-                deudasHtml += `
-                    <div class="text-sm flex justify-between">
-                        <span class="font-medium status-value">${deuda.acreedor}</span>
-                        <span class="font-bold status-value negative">$${deuda.saldo.toLocaleString()}</span>
-                    </div>
-                `;
+                deudasHtml += `<div class="text-sm flex justify-between"><span class="font-medium status-value">${deuda.acreedor}</span><span class="font-bold status-value negative">$${deuda.saldo.toLocaleString()}</span></div>`;
             });
             deudasHtml += '</div></div>';
             financialStatusContainer.innerHTML += deudasHtml;
@@ -242,7 +215,7 @@
             if (sender === 'user') bubbleClass = 'chat-bubble-user';
             else if (type === 'error') bubbleClass = 'chat-bubble-error';
             const bubble = document.createElement('div');
-            bubble.className = `max-w-xl p-3 rounded-lg my-1 ${bubbleClass}`;
+            bubble.className = `max-w-xl p-3 rounded-xl my-1 ${bubbleClass}`;
             bubble.innerText = message;
             messageDiv.appendChild(bubble);
             chatContainer.appendChild(messageDiv);
@@ -252,9 +225,6 @@
         async function handleUserInput() {
             if (!GEMINI_API_KEY || GEMINI_API_KEY === "PEGA_TU_API_KEY_DE_GEMINI_AQUI") {
                 addMessageToChat("Error de configuración: Falta la clave API de Gemini.", "ai", "error"); return;
-            }
-            if (!firebaseConfig.apiKey || firebaseConfig.projectId === "tu-proyecto") {
-                addMessageToChat("Error de configuración: Falta la configuración de Firebase.", "ai", "error"); return;
             }
             const query = userInput.value.trim();
             if (!query) return;
@@ -275,7 +245,7 @@
                 }
                 const result = await response.json();
                 if (result.candidates && result.candidates[0].content?.parts?.length > 0) {
-                    processAIResponse(result.candidates[0].content.parts[0].text);
+                    await processAIResponse(result.candidates[0].content.parts[0].text);
                 } else {
                     addMessageToChat("Lo siento, no pude procesar la respuesta de la IA.", "ai", "error");
                 }
@@ -289,7 +259,7 @@
             }
         }
 
-        function processAIResponse(responseText) {
+        async function processAIResponse(responseText) {
             const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
             const match = responseText.match(jsonRegex);
             let chatMessage = responseText;
@@ -299,12 +269,24 @@
                 chatMessage = responseText.replace(jsonRegex, '').trim();
                 try {
                     const newState = JSON.parse(jsonString);
+                    const oldState = JSON.parse(JSON.stringify(financialState));
                     financialState = newState;
                     renderFinancialStatus();
-                    saveFinancialState();
-                    chatMessage += "\n\n(He actualizado el estado financiero y lo he guardado en la base de datos.)";
+                    await saveFinancialState();
+                    
+                    // Lógica simple para determinar qué transacción registrar
+                    const diff = newState.cuentas.corriente.saldo - oldState.cuentas.corriente.saldo;
+                    if (chatMessage.toLowerCase().includes("ingreso")) {
+                        await saveTransaction(chatMessage, diff || 0, 'income');
+                    } else if (chatMessage.toLowerCase().includes("meta creada")) {
+                         await saveTransaction(chatMessage, 0, 'creation');
+                    } else if (chatMessage.toLowerCase().includes("deuda registrada")) {
+                         await saveTransaction(chatMessage, 0, 'creation');
+                    }
+                    
+                    chatMessage += "\n\n(He actualizado el estado financiero y guardado la transacción en el historial.)";
                 } catch (e) {
-                    chatMessage += "\n\n(Error: No pude actualizar el estado financiero. El formato JSON recibido era inválido.)";
+                    chatMessage += "\n\n(Error: No pude actualizar el estado financiero.)";
                 }
             }
             addMessageToChat(chatMessage, 'ai');
@@ -322,6 +304,8 @@
                 2.  **PIC**: Si faltan datos numéricos para una acción, pide la información.
                 3.  **Regla de Acción Única**: Tras ejecutar una acción y devolver el JSON, considera la tarea completada. Espera una NUEVA instrucción. Si el usuario dice "gracias", responde "De nada. ¿Algo más?".
                 ### LÓGICA DE DECISIONES CLAVE
+                - **Protocolo de Creación de Metas (PCM)**: Si el usuario quiere 'crear una nueva meta de ahorro', pide 'nombre' y 'monto'. Luego, añade un nuevo objeto a 'sinkingFunds'. Informa que la "meta fue creada".
+                - **Protocolo de Registro de Deudas (PRD)**: Si el usuario quiere 'registrar una nueva deuda', pide 'acreedor', 'saldo', 'pago mensual' y 'tipo'. Luego, añade un nuevo objeto a 'deudas'. Informa que la "deuda fue registrada".
                 - **Ingresos**: Un **ingreso nuevo** debe aplicarse inmediatamente a la primera meta incompleta de la 'jerarquiaMetasActiva'.
                 - **Emergencias**:
                     - **PE-4 (Médico > $10k)**: SÍ usar 'miniFondo' y 'fondo6m'.
