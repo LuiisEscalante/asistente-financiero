@@ -42,8 +42,15 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // **ACCIÓN REQUERIDA**: Pega la misma configuración de Firebase que usaste en index.html
-        const firebaseConfig = { /* ... */ };
+        // **ACCIÓN REQUERIDA**: TU CONFIGURACIÓN DE FIREBASE YA ESTÁ AQUÍ.
+        const firebaseConfig = {
+          apiKey: "AIzaSyA6qN_uF3ljC3MuzVgXc0IcQdNXHdYdVZQ",
+          authDomain: "asistente-financiero-de-luis.firebaseapp.com",
+          projectId: "asistente-financiero-de-luis",
+          storageBucket: "asistente-financiero-de-luis.appspot.com",
+          messagingSenderId: "1042510262841",
+          appId: "1:1042510262841:web:46a4a02d88c3cc1523d3e8"
+        };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -51,7 +58,6 @@
         const transactionsList = document.getElementById('transactions-list');
         const loadingMessage = document.getElementById('loading-message');
 
-        // Función para obtener el ícono y color según el tipo de transacción
         function getTransactionVisuals(type, amount) {
             if (type === 'income' || amount > 0) {
                 return {
@@ -67,14 +73,12 @@
                     bgColor: 'bg-red-500/10'
                 };
             }
-            // Por defecto para 'creation' o tipos neutros
             return {
                 icon: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l-4 4-4-4 4-4"/></svg>`,
                 color: 'text-blue-400',
                 bgColor: 'bg-blue-500/10'
             };
         }
-
 
         async function fetchAndDisplayTransactions() {
             try {
@@ -96,6 +100,8 @@
                     const transactionElement = document.createElement('div');
                     transactionElement.className = 'bg-gray-800 p-4 rounded-lg flex items-center space-x-4 hover:bg-gray-700/50 transition-colors';
                     
+                    const amount = transaction.amount || 0;
+                    
                     transactionElement.innerHTML = `
                         <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${visuals.bgColor} ${visuals.color}">
                            ${visuals.icon}
@@ -105,7 +111,7 @@
                             <p class="text-sm text-gray-400">${date}</p>
                         </div>
                         <div class="text-lg font-bold ${visuals.color} text-right">
-                            ${transaction.amount > 0 ? '+' : ''}${transaction.amount.toLocaleString('es-ES', {style: 'currency', currency: 'MXN'})}
+                            ${amount > 0 ? '+' : ''}${amount.toLocaleString('es-ES', {style: 'currency', currency: 'MXN'})}
                         </div>
                     `;
                     transactionsList.appendChild(transactionElement);
