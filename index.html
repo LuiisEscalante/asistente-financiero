@@ -41,20 +41,20 @@
     
     <!-- Sidebar Ocultable para el Estado Financiero -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden"></div>
-    <aside id="financial-sidebar" class="fixed top-0 left-0 z-40 w-80 h-screen bg-gray-900 border-r border-gray-700 p-4 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+    <aside id="financial-sidebar" class="fixed top-0 left-0 z-40 w-80 h-screen bg-gray-900 border-r border-gray-700 p-4 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out overflow-y-auto">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-2xl font-bold text-white">Estado Financiero</h2>
             <button id="close-sidebar-btn" class="text-gray-400 hover:text-white lg:hidden">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
-        <div id="financial-status" class="space-y-4 overflow-y-auto h-[calc(100%-4rem)]">
+        <div id="financial-status" class="space-y-4 h-[calc(100%-4rem)]">
             <!-- El contenido financiero se renderizará aquí -->
         </div>
     </aside>
 
     <!-- Contenido Principal (Chat) -->
-    <div class="flex flex-col h-screen lg:ml-80">
+    <div id="main-content" class="flex flex-col h-screen lg:ml-80 transition-all duration-300 ease-in-out">
         <header class="flex items-center p-4 bg-gray-900 border-b border-gray-800">
             <button id="menu-btn" class="p-2 mr-4 text-gray-400 rounded-lg hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-600">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
@@ -71,7 +71,7 @@
         
         <footer class="p-4 bg-gray-900 border-t border-gray-800">
             <div class="flex items-center space-x-4">
-                <input type="text" id="user-input" class="flex-1 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <input type="text" id="user-input" class="flex-1 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Escribe tu consulta aquí...">
                 <button id="send-button" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500 disabled:bg-gray-500">Enviar</button>
             </div>
         </footer>
@@ -88,24 +88,33 @@
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- 1. CONFIGURACIÓN ---
+        
+        // **ACCIÓN REQUERIDA 1**: Reemplaza esto con tu objeto de configuración de Firebase.
         const firebaseConfig = {
-            // **ACCIÓN REQUERIDA 1**: Pega tu objeto de configuración de Firebase aquí.
+            apiKey: "AIza...",
+            authDomain: "tu-proyecto.firebaseapp.com",
+            projectId: "tu-proyecto",
+            storageBucket: "tu-proyecto.appspot.com",
+            messagingSenderId: "12345...",
+            appId: "1:12345...:web:..."
         };
-        const GEMINI_API_KEY = "AIzaSyB04aZK2GwiyRAAV5lrfczaM9Lx9iMV-wU"; // **ACCIÓN REQUERIDA 2**
+        
+        // **ACCIÓN REQUERIDA 2**: Pega tu clave API de Gemini aquí.
+        const GEMINI_API_KEY = "AIzaSyB04aZK2GwiyRAAV5lrfczaM9Lx9iMV-wU";
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const initialState = { /* ... (igual que antes) ... */ };
+        const initialState = { "ultimaActualizacion": "2025-06-22T09:00:00Z", "cuentas": { "corriente": { "saldo": 15000 }, "colchonCaja": { "saldo": 20000, "meta": 20000 }, "miniFondo": { "saldo": 10000, "meta": 20000 }, "fondo6m": { "saldo": 50000, "meta": 255000 } }, "sinkingFunds": [ { "nombre": "Liquidación Gonzalo López", "saldo": 25000, "meta": 85000 }, { "nombre": "Parto", "saldo": 5700, "meta": 40000 }, { "nombre": "Complicaciones Parto", "saldo": 6300, "meta": 40000 } ], "deudas": [ { "acreedor": "Banco", "saldo": 240000, "pagoMensual": 8700, "tipo": "Solo Interés" }, { "acreedor": "Gonzalo López", "saldo": 100000, "pagoMensual": 4000, "tipo": "Solo Interés" }, { "acreedor": "Don Manuel", "saldo": 2365000, "pagoMensual": 5000, "tipo": "Capital" } ], "jerarquiaMetasActiva": [ "Completar Mini-Fondo de Emergencia", "Completar Liquidación de Gonzalo López", "Completar Sinking Funds de Parto & Complicaciones", "Completar Fondo de Emergencia 6m", "Amortización Acelerada Banco", "Aumentar pago Don Manuel + Inversión" ] };
         let financialState = {};
         let chatHistory = [];
         const dbDocRef = doc(db, "financialData", "luisState");
 
-        // Elementos de la UI
         const menuBtn = document.getElementById('menu-btn');
         const closeSidebarBtn = document.getElementById('close-sidebar-btn');
         const sidebar = document.getElementById('financial-sidebar');
         const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const mainContent = document.getElementById('main-content');
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
@@ -113,17 +122,23 @@
         const loadingIndicator = document.getElementById('loading-indicator');
         const loadingOverlay = document.getElementById('loading-overlay');
 
-        // Lógica para el Sidebar
-        const toggleSidebar = () => {
-            sidebar.classList.toggle('-translate-x-full');
-            sidebarOverlay.classList.toggle('hidden');
+        const toggleSidebar = (show) => {
+            if (show) {
+                sidebar.classList.remove('-translate-x-full');
+                if (window.innerWidth < 1024) {
+                    sidebarOverlay.classList.remove('hidden');
+                }
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                if (window.innerWidth < 1024) {
+                    sidebarOverlay.classList.add('hidden');
+                }
+            }
         };
-        menuBtn.addEventListener('click', toggleSidebar);
-        closeSidebarBtn.addEventListener('click', toggleSidebar);
-        sidebarOverlay.addEventListener('click', toggleSidebar);
+        menuBtn.addEventListener('click', () => toggleSidebar(true));
+        closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
+        sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
 
-        // ... (el resto del código JS - loadOrCreateInitialData, saveFinancialState, renderFinancialStatus, etc. - es el mismo)
-        
         async function loadOrCreateInitialData() {
             try {
                 const docSnap = await getDoc(dbDocRef);
@@ -160,7 +175,6 @@
         
         function renderFinancialStatus() {
              financialStatusContainer.innerHTML = ''; 
-            // Cuentas principales
             let accountsHtml = '<div class="status-card rounded-lg p-4"><h3 class="text-lg font-semibold mb-2 status-title">Cuentas Principales</h3><div class="space-y-3">';
             for (const [key, value] of Object.entries(financialState.cuentas)) {
                 const progress = value.meta ? (value.saldo / value.meta * 100).toFixed(0) : -1;
@@ -180,7 +194,6 @@
             accountsHtml += '</div></div>';
             financialStatusContainer.innerHTML += accountsHtml;
 
-            // Sinking Funds
             let sinkingFundsHtml = '<div class="status-card rounded-lg p-4"><h3 class="text-lg font-semibold mb-2 status-title">Sinking Funds (Metas)</h3><div class="space-y-3">';
             financialState.sinkingFunds.forEach(fund => {
                 const progress = (fund.saldo / fund.meta * 100).toFixed(0);
@@ -199,7 +212,6 @@
             sinkingFundsHtml += '</div></div>';
             financialStatusContainer.innerHTML += sinkingFundsHtml;
             
-            // Deudas
             let deudasHtml = '<div class="status-card rounded-lg p-4"><h3 class="text-lg font-semibold mb-2 status-title">Deudas Vigentes</h3><div class="space-y-2">';
             financialState.deudas.forEach(deuda => {
                 deudasHtml += `
@@ -229,8 +241,10 @@
 
         async function handleUserInput() {
             if (!GEMINI_API_KEY || GEMINI_API_KEY === "PEGA_TU_API_KEY_DE_GEMINI_AQUI") {
-                addMessageToChat("Error de configuración: Falta la clave API de Gemini.", "ai", "error");
-                return;
+                addMessageToChat("Error de configuración: Falta la clave API de Gemini.", "ai", "error"); return;
+            }
+            if (!firebaseConfig.apiKey) {
+                addMessageToChat("Error de configuración: Falta la configuración de Firebase.", "ai", "error"); return;
             }
             const query = userInput.value.trim();
             if (!query) return;
@@ -277,7 +291,7 @@
                     const newState = JSON.parse(jsonString);
                     financialState = newState;
                     renderFinancialStatus();
-                    saveFinancialState(); // Guardar en Firebase
+                    saveFinancialState();
                     chatMessage += "\n\n(He actualizado el estado financiero y lo he guardado en la base de datos.)";
                 } catch (e) {
                     chatMessage += "\n\n(Error: No pude actualizar el estado financiero. El formato JSON recibido era inválido.)";
