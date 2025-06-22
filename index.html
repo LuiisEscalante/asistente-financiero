@@ -34,7 +34,7 @@
         .loader { width: 24px; height: 24px; border: 3px solid #374151; border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 10px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        .loading-overlay { position: fixed; inset: 0; background-color: rgba(17, 24, 39, 0.8); z-index: 50; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
+        .loading-overlay { position: fixed; inset: 0; background-color: rgba(17, 24, 39, 0.9); z-index: 50; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
     </style>
 </head>
 <body class="h-screen overflow-hidden">
@@ -101,6 +101,18 @@
         
         // **ACCIÓN REQUERIDA 2**: Pega tu clave API de Gemini aquí.
         const GEMINI_API_KEY = "AIzaSyB04aZK2GwiyRAAV5lrfczaM9Lx9iMV-wU";
+        
+        const loadingOverlay = document.getElementById('loading-overlay');
+
+        // **FIX**: Verificación de configuración para evitar errores silenciosos.
+        if (!firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith("AIza...")) {
+            loadingOverlay.innerHTML = `<div class="p-4 bg-red-800 text-white rounded-lg text-center max-w-md">
+                <h2 class="font-bold text-lg">Error de Configuración</h2>
+                <p class="mt-1">Falta la configuración de Firebase en el archivo <strong>index.html</strong>.</p>
+                <p class="mt-2 text-sm">Por favor, edita el archivo en GitHub y reemplaza el objeto 'firebaseConfig' con el tuyo.</p>
+            </div>`;
+            throw new Error("Configuración de Firebase incompleta.");
+        }
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -120,7 +132,6 @@
         const sendButton = document.getElementById('send-button');
         const financialStatusContainer = document.getElementById('financial-status');
         const loadingIndicator = document.getElementById('loading-indicator');
-        const loadingOverlay = document.getElementById('loading-overlay');
 
         const toggleSidebar = (show) => {
             if (show) {
@@ -243,7 +254,7 @@
             if (!GEMINI_API_KEY || GEMINI_API_KEY === "PEGA_TU_API_KEY_DE_GEMINI_AQUI") {
                 addMessageToChat("Error de configuración: Falta la clave API de Gemini.", "ai", "error"); return;
             }
-            if (!firebaseConfig.apiKey) {
+            if (!firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith("AIza...")) {
                 addMessageToChat("Error de configuración: Falta la configuración de Firebase.", "ai", "error"); return;
             }
             const query = userInput.value.trim();
