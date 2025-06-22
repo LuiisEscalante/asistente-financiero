@@ -1,152 +1,143 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asistente Financiero Personal</title>
+    <title>Asistente Financiero Personal con Memoria</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        #chat-container::-webkit-scrollbar {
-            width: 8px;
-        }
-        #chat-container::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        #chat-container::-webkit-scrollbar-thumb {
-            background: #94a3b8;
-            border-radius: 10px;
-        }
-        #chat-container::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
-        }
-        .chat-bubble-user {
-            background-color: #3b82f6;
-            color: white;
-        }
-        .chat-bubble-ai {
-            background-color: #e5e7eb;
-            color: #1f2937;
-        }
-        .chat-bubble-error {
-            background-color: #fef2f2;
-            color: #b91c1c;
-            border: 1px solid #fecaca;
-        }
-        .status-card {
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-        }
-        .status-title {
-            color: #0f172a;
-        }
-        .status-value {
-            color: #475569;
-        }
-        .status-value.positive {
-            color: #16a34a;
-        }
-        .status-value.negative {
-            color: #dc2626;
-        }
-        .loader {
-            width: 24px;
-            height: 24px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 10px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        body { font-family: 'Inter', sans-serif; }
+        #chat-container::-webkit-scrollbar { width: 8px; }
+        #chat-container::-webkit-scrollbar-track { background: #f1f5f9; }
+        #chat-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        #chat-container::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .chat-bubble-user { background-color: #3b82f6; color: white; }
+        .chat-bubble-ai { background-color: #e5e7eb; color: #1f2937; }
+        .chat-bubble-error { background-color: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;}
+        .status-card { background-color: #f8fafc; border: 1px solid #e2e8f0; }
+        .status-title { color: #0f172a; }
+        .status-value { color: #475569; }
+        .status-value.positive { color: #16a34a; }
+        .status-value.negative { color: #dc2626; }
+        .loader { width: 24px; height: 24px; border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-overlay { position: fixed; inset: 0; background-color: rgba(255, 255, 255, 0.8); z-index: 50; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
     </style>
 </head>
-
 <body class="bg-slate-100 flex flex-col md:flex-row h-screen">
+    
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loader"></div>
+        <p class="text-slate-600">Cargando datos desde la base de datos...</p>
+    </div>
 
     <!-- Panel de Estado Financiero (Izquierda) -->
     <div class="w-full md:w-1/3 p-4 bg-white overflow-y-auto">
         <h2 class="text-2xl font-bold mb-4 text-slate-800">Estado Financiero de Luis</h2>
         <p class="text-sm text-slate-500 mb-6">Esta es la "memoria" del asistente. Los cálculos se basan en estos datos.</p>
-        <div id="financial-status" class="space-y-4">
-            <!-- El estado financiero se renderizará aquí -->
-        </div>
+        <div id="financial-status" class="space-y-4"></div>
     </div>
 
     <!-- Panel de Chat (Derecha) -->
     <div class="w-full md:w-2/3 flex flex-col bg-slate-50 h-full">
-        <div id="chat-container" class="flex-1 p-6 overflow-y-auto">
-            <!-- Los mensajes del chat se agregarán aquí -->
-        </div>
-
+        <div id="chat-container" class="flex-1 p-6 overflow-y-auto"></div>
         <div id="loading-indicator" class="hidden items-center px-6 py-2">
              <div class="loader"></div>
              <span class="text-slate-500">El asistente está pensando...</span>
         </div>
-
         <div class="p-4 bg-white border-t border-slate-200">
             <div class="flex items-center space-x-4">
                 <input type="text" id="user-input" class="flex-1 p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Escribe tu consulta aquí...">
-                <button id="send-button" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400">
-                    Enviar
-                </button>
+                <button id="send-button" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400">Enviar</button>
             </div>
         </div>
     </div>
 
-    <script>
-        // --- 1. ESTADO INICIAL Y CONFIGURACIÓN ---
+    <!-- Firebase y Lógica de la App -->
+    <script type="module">
+        // Importaciones de Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // --- 1. CONFIGURACIÓN ---
         
+        // **ACCIÓN REQUERIDA 1**: Pega tu objeto de configuración de Firebase aquí.
+        const firebaseConfig = {
+            apiKey: "AIzaSyA6qN_uF3ljC3MuzVgXc0IcQdNXHdYdVZQ",
+            authDomain: "asistente-financiero-de-luis.firebaseapp.com",
+            projectId: "asistente-financiero-de-luis",
+            storageBucket: "asistente-financiero-de-luis.appspot.com",
+            messagingSenderId: "1042510262841",
+            appId: "1:1042510262841:web:46a4a02d88c3cc1523d3e8"
+        };
+        
+        // **ACCIÓN REQUERIDA 2**: Pega tu clave API de Gemini aquí.
         const GEMINI_API_KEY = "AIzaSyB04aZK2GwiyRAAV5lrfczaM9Lx9iMV-wU";
 
-        let financialState = {
+        // Inicialización de Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Estado inicial por si la base de datos está vacía
+        const initialState = {
             "ultimaActualizacion": "2025-06-22T09:00:00Z",
-            "cuentas": {
-                "corriente": { "saldo": 15000 },
-                "colchonCaja": { "saldo": 20000, "meta": 20000 },
-                "miniFondo": { "saldo": 10000, "meta": 20000 },
-                "fondo6m": { "saldo": 50000, "meta": 255000 }
-            },
-            "sinkingFunds": [
-                { "nombre": "Liquidación Gonzalo López", "saldo": 25000, "meta": 85000 },
-                { "nombre": "Parto", "saldo": 5700, "meta": 40000 },
-                { "nombre": "Complicaciones Parto", "saldo": 6300, "meta": 40000 }
-            ],
-            "deudas": [
-                { "acreedor": "Banco", "saldo": 240000, "pagoMensual": 8700, "tipo": "Solo Interés" },
-                { "acreedor": "Gonzalo López", "saldo": 100000, "pagoMensual": 4000, "tipo": "Solo Interés" },
-                { "acreedor": "Don Manuel", "saldo": 2365000, "pagoMensual": 5000, "tipo": "Capital" }
-            ],
-            "jerarquiaMetasActiva": [
-                "Completar Mini-Fondo de Emergencia",
-                "Completar Liquidación de Gonzalo López",
-                "Completar Sinking Funds de Parto & Complicaciones",
-                "Completar Fondo de Emergencia 6m",
-                "Amortización Acelerada Banco",
-                "Aumentar pago Don Manuel + Inversión"
-            ]
+            "cuentas": { "corriente": { "saldo": 15000 }, "colchonCaja": { "saldo": 20000, "meta": 20000 }, "miniFondo": { "saldo": 10000, "meta": 20000 }, "fondo6m": { "saldo": 50000, "meta": 255000 } },
+            "sinkingFunds": [ { "nombre": "Liquidación Gonzalo López", "saldo": 25000, "meta": 85000 }, { "nombre": "Parto", "saldo": 5700, "meta": 40000 }, { "nombre": "Complicaciones Parto", "saldo": 6300, "meta": 40000 } ],
+            "deudas": [ { "acreedor": "Banco", "saldo": 240000, "pagoMensual": 8700, "tipo": "Solo Interés" }, { "acreedor": "Gonzalo López", "saldo": 100000, "pagoMensual": 4000, "tipo": "Solo Interés" }, { "acreedor": "Don Manuel", "saldo": 2365000, "pagoMensual": 5000, "tipo": "Capital" } ],
+            "jerarquiaMetasActiva": [ "Completar Mini-Fondo de Emergencia", "Completar Liquidación de Gonzalo López", "Completar Sinking Funds de Parto & Complicaciones", "Completar Fondo de Emergencia 6m", "Amortización Acelerada Banco", "Aumentar pago Don Manuel + Inversión" ]
         };
 
+        let financialState = {};
         let chatHistory = [];
+        const dbDocRef = doc(db, "financialData", "luisState");
 
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
         const financialStatusContainer = document.getElementById('financial-status');
         const loadingIndicator = document.getElementById('loading-indicator');
+        const loadingOverlay = document.getElementById('loading-overlay');
 
-        // --- 2. LÓGICA DE LA APLICACIÓN ---
+        // --- LÓGICA DE LA APLICACIÓN ---
 
+        async function loadOrCreateInitialData() {
+            try {
+                const docSnap = await getDoc(dbDocRef);
+                if (docSnap.exists()) {
+                    financialState = docSnap.data();
+                } else {
+                    console.log("No se encontró documento, creando uno nuevo con estado inicial.");
+                    await setDoc(dbDocRef, initialState);
+                    financialState = initialState;
+                }
+            } catch (error) {
+                console.error("Error al cargar o crear datos:", error);
+                addMessageToChat(`Error al conectar con la base de datos: ${error.message}. Usando datos locales.`, "ai", "error");
+                financialState = initialState;
+            } finally {
+                renderFinancialStatus();
+                loadingOverlay.style.display = 'none';
+                const initialMessage = "Hola Luis, soy tu asistente financiero. He cargado tu estado actual desde la base de datos. ¿En qué te puedo ayudar hoy?";
+                addMessageToChat(initialMessage, 'ai');
+                chatHistory.push({ role: 'model', parts: [{ text: initialMessage }] });
+                userInput.focus();
+            }
+        }
+
+        async function saveFinancialState() {
+            try {
+                await setDoc(dbDocRef, financialState);
+                console.log("Estado guardado en Firestore exitosamente.");
+            } catch (error) {
+                console.error("Error al guardar el estado en Firestore:", error);
+                addMessageToChat(`Hubo un error al guardar tu información en la base de datos: ${error.message}`, "ai", "error");
+            }
+        }
+        
         function renderFinancialStatus() {
-            financialStatusContainer.innerHTML = ''; 
-
+             financialStatusContainer.innerHTML = ''; 
+            // ... (El resto de la función de renderizado es igual)
             let accountsHtml = '<div class="status-card rounded-lg p-4"><h3 class="text-lg font-semibold mb-2 status-title">Cuentas Principales</h3><div class="space-y-2">';
             for (const [key, value] of Object.entries(financialState.cuentas)) {
                 const progress = value.meta ? (value.saldo / value.meta * 100).toFixed(0) : -1;
@@ -200,17 +191,12 @@
         function addMessageToChat(message, sender, type = 'ai') {
             const messageDiv = document.createElement('div');
             messageDiv.className = `w-full flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
-            
-            const bubble = document.createElement('div');
             let bubbleClass = 'chat-bubble-ai';
-            if (sender === 'user') {
-                bubbleClass = 'chat-bubble-user';
-            } else if (type === 'error') {
-                bubbleClass = 'chat-bubble-error';
-            }
+            if (sender === 'user') bubbleClass = 'chat-bubble-user';
+            else if (type === 'error') bubbleClass = 'chat-bubble-error';
+            const bubble = document.createElement('div');
             bubble.className = `max-w-lg lg:max-w-xl p-3 rounded-lg my-1 ${bubbleClass}`;
             bubble.innerText = message;
-            
             messageDiv.appendChild(bubble);
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -218,68 +204,34 @@
 
         async function handleUserInput() {
             if (!GEMINI_API_KEY || GEMINI_API_KEY === "PEGA_TU_API_KEY_DE_GEMINI_AQUI") {
-                addMessageToChat(
-                    "Error de configuración: Falta la clave API de Gemini. Por favor, edita el archivo index.html y añade tu clave donde se indica.",
-                    "ai",
-                    "error"
-                );
+                addMessageToChat("Error de configuración: Falta la clave API de Gemini.", "ai", "error");
                 return;
             }
-
             const query = userInput.value.trim();
             if (!query) return;
-
             addMessageToChat(query, 'user');
             userInput.value = '';
             userInput.disabled = true;
             sendButton.disabled = true;
             loadingIndicator.style.display = 'flex';
-            
             chatHistory.push({ role: "user", parts: [{ text: query }] });
-
             try {
-                const systemInstruction = {
-                    parts: [{
-                        text: `${buildSystemPrompt()}\n\n--- ESTADO FINANCIERO ACTUAL (JSON) ---\n${JSON.stringify(financialState, null, 2)}`
-                    }]
-                };
-
-                const payload = {
-                    contents: chatHistory,
-                    system_instruction: systemInstruction
-                };
-
+                const systemInstruction = { parts: [{ text: `${buildSystemPrompt()}\n\n--- ESTADO FINANCIERO ACTUAL (JSON) ---\n${JSON.stringify(financialState, null, 2)}` }] };
+                const payload = { contents: chatHistory, system_instruction: systemInstruction };
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response.ok) {
                     const errorBody = await response.json().catch(() => ({}));
-                    console.error("Error Body from API:", errorBody);
                     throw new Error(`Error de la API: ${response.status} ${response.statusText}. ${errorBody?.error?.message || 'Revisa que tu clave API sea correcta.'}`);
                 }
-
                 const result = await response.json();
-                
-                if (result.candidates && result.candidates.length > 0 &&
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0) {
-                    
-                    const responseText = result.candidates[0].content.parts[0].text;
-                    processAIResponse(responseText);
-
+                if (result.candidates && result.candidates[0].content?.parts?.length > 0) {
+                    processAIResponse(result.candidates[0].content.parts[0].text);
                 } else {
-                    addMessageToChat("Lo siento, no pude procesar la respuesta de la IA. La respuesta no tuvo el formato esperado. Por favor, intenta de nuevo.", "ai", "error");
-                    console.error("Respuesta inesperada de la API:", result);
+                    addMessageToChat("Lo siento, no pude procesar la respuesta de la IA.", "ai", "error");
                 }
-
             } catch (error) {
-                console.error('Error al contactar a la API de Gemini:', error);
-                addMessageToChat(`Ocurrió un error: ${error.message}. Revisa la consola para más detalles.`, "ai", "error");
+                addMessageToChat(`Ocurrió un error: ${error.message}.`, "ai", "error");
             } finally {
                 userInput.disabled = false;
                 sendButton.disabled = false;
@@ -292,9 +244,7 @@
             const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
             const match = responseText.match(jsonRegex);
             let chatMessage = responseText;
-            
             chatHistory.push({ role: 'model', parts: [{ text: responseText }] });
-
             if (match && match[1]) {
                 const jsonString = match[1];
                 chatMessage = responseText.replace(jsonRegex, '').trim();
@@ -302,50 +252,37 @@
                     const newState = JSON.parse(jsonString);
                     financialState = newState;
                     renderFinancialStatus();
-                    chatMessage += "\n\n(He actualizado el estado financiero con esta operación.)";
+                    saveFinancialState(); // Guardar en Firebase
+                    chatMessage += "\n\n(He actualizado el estado financiero y lo he guardado en la base de datos.)";
                 } catch (e) {
-                    console.error("Error al parsear el JSON de la IA:", e);
                     chatMessage += "\n\n(Error: No pude actualizar el estado financiero. El formato JSON recibido era inválido.)";
                 }
             }
-            
             addMessageToChat(chatMessage, 'ai');
         }
 
         function buildSystemPrompt() {
-            // **CORRECCIÓN CLAVE**: Se añade la "Regla de Acción Única".
             return `
-                Eres un asistente financiero personal para un usuario llamado Luis. Tu comportamiento se rige ESTRICTAMENTE por las siguientes reglas. Eres disciplinado, preciso y te basas en los datos proporcionados. Analiza el historial de chat para entender el contexto completo antes de responder.
-
-                ### REGLA DE PRIORIDAD MÁXIMA: GESTIÓN DE ESTADO (Manual v4.0)
-                1.  Tu lógica se basa EXCLUSIVAMENTE en el archivo 'estado_luis.json' que se te proporciona en cada prompt.
+                Eres un asistente financiero personal para Luis. Tu comportamiento se rige ESTRICTAMENTE por las siguientes reglas.
+                ### REGLA DE PRIORIDAD MÁXIMA: GESTIÓN DE ESTADO
+                1.  Tu lógica se basa EXCLUSIVAMENTE en el archivo 'estado_luis.json' que se te proporciona.
                 2.  Si una interacción cambia las finanzas, tu respuesta final DEBE incluir un bloque \`\`\`json con el objeto 'estado_luis.json' actualizado.
                 3.  Si es solo una consulta, NO devuelvas un bloque JSON.
-
                 ### PROTOCOLO DE INTERACCIÓN Y LÓGICA
-                1.  **Analiza la conversación completa.** No preguntes por información que ya se ha dado en turnos anteriores.
-                2.  **PIC (Protocolo de Interacción y Clarificación)**: Si después de revisar el historial, aún faltan datos numéricos esenciales para ejecutar una acción, pide la información.
-                3.  **Regla de Acción Única (MUY IMPORTANTE)**: Después de ejecutar una acción que modifica el estado (como registrar un ingreso) y devolver el JSON, tu turno termina. Considera la tarea completada. En el siguiente turno, espera una NUEVA instrucción del usuario. No intentes continuar o re-evaluar la acción anterior. Si el usuario dice "gracias" o "listo", simplemente responde con un saludo corto como "De nada. ¿Necesitas algo más?".
-
+                1.  **Analiza la conversación completa.** No preguntes por información ya dada.
+                2.  **PIC**: Si faltan datos numéricos para una acción, pide la información.
+                3.  **Regla de Acción Única**: Tras ejecutar una acción y devolver el JSON, considera la tarea completada. Espera una NUEVA instrucción. Si el usuario dice "gracias", responde "De nada. ¿Algo más?".
                 ### LÓGICA DE DECISIONES CLAVE
-                - **Jerarquía de Metas y Flujo de Ingresos**: Cuando se confirma un **ingreso nuevo**, aplícalo inmediatamente a la primera meta incompleta de la 'jerarquiaMetasActiva'.
-                - **Protocolos de Emergencia**:
-                    - **PE-4 (Gasto Médico > $10,000)**: Para emergencias MÉDICAS, SÍ está permitido usar el 'miniFondo' y luego el 'fondo6m'.
-                    - **PE-5 (Avería de Herramienta > $5,000)**: Para averías de herramientas, NO se usan los fondos de emergencia existentes. La acción correcta es pausar la meta activa y crear un NUEVO sinking fund de emergencia que se convierte en la prioridad número uno.
-                - **Árbol de Decisión de Gasto**: Para gastos no indispensables, evalúa: ¿presupuestado? ¿genera ingreso/evita multa? Si no, DIFERIR.
-
-                Tu tono es profesional y directo. Tu objetivo es la claridad y precisión.
+                - **Ingresos**: Un **ingreso nuevo** debe aplicarse inmediatamente a la primera meta incompleta de la 'jerarquiaMetasActiva'.
+                - **Emergencias**:
+                    - **PE-4 (Médico > $10k)**: SÍ usar 'miniFondo' y 'fondo6m'.
+                    - **PE-5 (Herramienta > $5k)**: NO usar fondos existentes. Pausar meta activa y crear NUEVO sinking fund como prioridad #1.
+                Tu tono es profesional y directo.
             `;
         }
         
-        window.onload = () => {
-            renderFinancialStatus();
-            const initialMessage = "Hola Luis, soy tu asistente financiero. He cargado tu estado actual. ¿En qué te puedo ayudar hoy?";
-            addMessageToChat(initialMessage, 'ai');
-            chatHistory.push({ role: 'model', parts: [{ text: initialMessage }] });
-            userInput.focus();
-        };
-
+        // --- INICIALIZACIÓN ---
+        window.onload = loadOrCreateInitialData;
         sendButton.addEventListener('click', handleUserInput);
         userInput.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
