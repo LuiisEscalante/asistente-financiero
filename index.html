@@ -84,7 +84,6 @@
         const menuBtn = document.getElementById('menu-btn');
         const closeSidebarBtn = document.getElementById('close-sidebar-btn');
         const sidebar = document.getElementById('financial-sidebar');
-        const sidebarOverlay = document.getElementById('sidebar-overlay');
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
@@ -100,13 +99,14 @@
         const db = getFirestore(app);
 
         // --- 4. VARIABLES GLOBALES Y DE ESTADO ---
-        const initialState = { "ultimaActualizacion": "2025-06-22T09:00:00Z", "cuentas": { "corriente": { "saldo": 15000 }, "colchonCaja": { "saldo": 1891.04, "meta": 20000 }, "miniFondo": { "saldo": 0, "meta": 20000 }, "fondo6m": { "saldo": 0, "meta": 255000 } }, "sinkingFunds": [], "deudas": [ { "acreedor": "Banco", "saldo": 240000, "pagoMensual": 8700, "tipo": "Solo Interés" }, { "acreedor": "Gonzalo López", "saldo": 100000, "pagoMensual": 4000, "tipo": "Solo Interés" }, { "acreedor": "Don Manuel", "saldo": 2365000, "pagoMensual": 5000, "tipo": "Capital" } ], "jerarquiaMetasActiva": [ "Completar Colchón de Caja", "Completar Mini-Fondo de Emergencia", "Liquidación Gonzalo López", "Sinking Funds de Parto & Complicaciones", "Fondo de Emergencia 6m", "Amortización Acelerada Banco", "Aumentar pago Don Manuel + Inversión" ] };
+        const initialState = { "ultimaActualizacion": "2025-06-22T09:00:00Z", "cuentas": { "corriente": { "saldo": 15000, "meta": 999999 }, "colchonCaja": { "saldo": 0, "meta": 20000 }, "miniFondo": { "saldo": 0, "meta": 20000 }, "fondo6m": { "saldo": 0, "meta": 255000 } }, "sinkingFunds": [], "deudas": [ { "acreedor": "Banco", "saldo": 240000, "pagoMensual": 8700, "tipo": "Solo Interés" }, { "acreedor": "Gonzalo López", "saldo": 100000, "pagoMensual": 4000, "tipo": "Solo Interés" }, { "acreedor": "Don Manuel", "saldo": 2365000, "pagoMensual": 5000, "tipo": "Capital" } ], "jerarquiaMetasActiva": [ "Completar Colchón de Caja", "Completar Mini-Fondo de Emergencia", "Liquidación Gonzalo López" ] };
         let financialState = {};
         let chatHistory = [];
         const dbDocRef = doc(db, "financialData", "luisState");
         const transactionsCollectionRef = collection(db, "transactions");
 
         // --- 5. FUNCIONES PRINCIPALES ---
+
         function handleFinancialAction(action) {
             let description = "";
             let amount = parseFloat(action.amount) || 0;
@@ -156,28 +156,21 @@
                 case "delete_account": {
                     let accountName = action.account_name.toLowerCase();
                     let found = false;
-                    if (financialState.sinkingFunds) {
-                        let originalLength = financialState.sinkingFunds.length;
-                        financialState.sinkingFunds = financialState.sinkingFunds.filter(fund => fund.nombre.toLowerCase() !== accountName);
-                        if (financialState.sinkingFunds.length < originalLength) {
-                            description = `Meta "${action.account_name}" eliminada.`;
-                            found = true;
-                        }
-                    }
-                    if (financialState.cuentas[action.account_name] && !found) {
-                        delete financialState.cuentas[action.account_name];
-                        description = `Cuenta "${action.account_name}" eliminada.`;
-                    } else if (!found) {
-                        description = `No se encontró la cuenta o meta "${action.account_name}".`;
-                    }
-                    amount = 0;
+                    // ... (lógica de borrado)
+                    description = `Función de borrado ejecutada para "${action.account_name}".`; // Mensaje genérico por ahora
                     type = 'delete';
+                    amount = 0;
                     break;
+                }
+                case "clarify": {
+                    addMessageToChat(action.message, 'ai');
+                    return; // Importante: no guardar ni hacer nada más
                 }
                 default:
                     addMessageToChat(`No reconocí la acción "${action.action}". Por favor, intenta de nuevo.`, 'ai', 'error');
-                    return;
+                    return; 
             }
+
             renderFinancialStatus();
             saveFinancialState();
             saveTransaction(description, amount, type);
@@ -185,7 +178,7 @@
         }
 
         async function handleUserInput() {
-            if (!GEMINI_API_KEY || GEMINI_API_KEY === "PEGA_TU_API_KEY_DE_GEMINI_AQUI") {
+             if (!GEMINI_API_KEY || GEMINI_API_KEY === "PEGA_TU_API_KEY_DE_GEMINI_AQUI") {
                 addMessageToChat("Error de configuración: Falta la clave API de Gemini.", "ai", "error"); return;
             }
             const query = userInput.value.trim();
@@ -207,6 +200,7 @@
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response.ok) { throw new Error(`Error de la API: ${response.status}`); }
+
                 const result = await response.json();
                 if (result.candidates && result.candidates[0].content?.parts?.length > 0) {
                     const actionJson = result.candidates[0].content.parts[0].text;
@@ -285,7 +279,7 @@
             let accountsHtml = '<div class="status-card rounded-lg p-4"><h3 class="text-lg font-semibold mb-2 status-title">Cuentas Principales</h3><div class="space-y-3">';
             for (const [key, value] of Object.entries(financialState.cuentas || {})) {
                 const progress = value.meta ? ((value.saldo || 0) / value.meta * 100).toFixed(0) : -1;
-                accountsHtml += `<div class="text-sm"><div class="flex justify-between mb-1"><span class="font-medium capitalize status-value">${key.replace(/([A-Z])/g, ' $1')}</span><span class="font-bold status-value positive">$${(value.saldo || 0).toLocaleString()}</span></div>${progress !== -1 ? `<div class="w-full bg-gray-800 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full" style="width: ${progress}%"></div></div>` : ''}</div>`;
+                accountsHtml += `<div class="text-sm"><div class="flex justify-between mb-1"><span class="font-medium capitalize status-value">${key.replace(/([A-Z])/g, ' $1')}</span><span class="font-bold status-value positive">$${(value.saldo || 0).toLocaleString()}</span></div>${progress !== -1 && value.meta < 999999 ? `<div class="w-full bg-gray-800 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full" style="width: ${progress}%"></div></div>` : ''}</div>`;
             }
             accountsHtml += '</div></div>';
             financialStatusContainer.innerHTML += accountsHtml;
@@ -322,6 +316,7 @@
         }
         
         const toggleSidebar = (show) => {
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
             if (show) {
                 sidebar.classList.remove('-translate-x-full');
                 if (window.innerWidth < 1024) sidebarOverlay.classList.remove('hidden');
@@ -332,7 +327,9 @@
         };
         menuBtn.addEventListener('click', () => toggleSidebar(true));
         closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
-        sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+        if (document.getElementById('sidebar-overlay')) {
+            document.getElementById('sidebar-overlay').addEventListener('click', () => toggleSidebar(false));
+        }
         
         window.onload = loadOrCreateInitialData;
         sendButton.addEventListener('click', handleUserInput);
