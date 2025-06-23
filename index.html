@@ -99,7 +99,7 @@
         const db = getFirestore(app);
 
         // --- 4. VARIABLES GLOBALES Y DE ESTADO ---
-        const initialState = { "ultimaActualizacion": "2025-06-22T09:00:00Z", "cuentas": { "corriente": { "saldo": 15000, "meta": 999999 }, "colchonCaja": { "saldo": 0, "meta": 20000 }, "miniFondo": { "saldo": 0, "meta": 20000 }, "fondo6m": { "saldo": 0, "meta": 255000 } }, "sinkingFunds": [], "deudas": [ { "acreedor": "Banco", "saldo": 240000, "pagoMensual": 8700, "tipo": "Solo Interés" }, { "acreedor": "Gonzalo López", "saldo": 100000, "pagoMensual": 4000, "tipo": "Solo Interés" }, { "acreedor": "Don Manuel", "saldo": 2365000, "pagoMensual": 5000, "tipo": "Capital" } ], "jerarquiaMetasActiva": [ "Completar Colchón de Caja", "Completar Mini-Fondo de Emergencia", "Liquidación Gonzalo López" ] };
+        const initialState = { "ultimaActualizacion": "2025-06-22T09:00:00Z", "cuentas": { "corriente": { "saldo": 15000, "meta": 999999 }, "colchonCaja": { "saldo": 0, "meta": 20000 }, "miniFondo": { "saldo": 0, "meta": 20000 }, "fondo6m": { "saldo": 0, "meta": 255000 } }, "sinkingFunds": [], "deudas": [ { "acreedor": "Banco", "saldo": 240000 }, { "acreedor": "Gonzalo López", "saldo": 100000 }, { "acreedor": "Don Manuel", "saldo": 2365000 } ] };
         let financialState = {};
         let chatHistory = [];
         const dbDocRef = doc(db, "financialData", "luisState");
@@ -110,13 +110,23 @@
             let description = "";
             let amount = parseFloat(action.amount) || 0;
             let type = 'neutral';
-            let accountName = action.account_name || 'corriente'; // Default to corriente if not specified
+            let accountName = action.account_name || 'corriente';
             
-            // Normalizar el nombre de la cuenta para que coincida con las claves del objeto
-            if (accountName.toLowerCase().includes('caja')) accountName = 'colchonCaja';
-            if (accountName.toLowerCase().includes('mini')) accountName = 'miniFondo';
-            if (accountName.toLowerCase().includes('fondo6m')) accountName = 'fondo6m';
-
+            const normalizeAccountName = (name) => {
+                const lowerName = name.toLowerCase();
+                const mapping = {
+                    'colchon de caja': 'colchonCaja', 'caja': 'colchonCaja',
+                    'mini fondo': 'miniFondo', 'minifondo': 'miniFondo',
+                    'fondo de emergencia': 'fondo6m', 'fondo6m': 'fondo6m',
+                    'corriente': 'corriente'
+                };
+                for (const key in mapping) {
+                    if (lowerName.includes(key)) return mapping[key];
+                }
+                return name; // Devuelve el nombre original si no hay coincidencia
+            };
+            
+            const normalizedAccount = normalizeAccountName(accountName);
 
             switch (action.action) {
                 case "add_income": {
@@ -152,31 +162,33 @@
                     break;
                 }
                 case "make_expense": {
-                    if (financialState.cuentas[accountName]) {
-                        financialState.cuentas[accountName].saldo -= amount;
+                    if (financialState.cuentas[normalizedAccount]) {
+                        financialState.cuentas[normalizedAccount].saldo -= amount;
                         description = `Gasto de ${amount.toLocaleString('es-MX', {style:'currency', currency:'MXN'})} registrado desde "${accountName}".`;
                         type = 'expense';
                         amount = -amount; // Registrar como negativo
                     } else {
-                        description = `Error: No se encontró la cuenta "${accountName}".`;
-                        addMessageToChat(description, 'ai', 'error');
-                        return;
+                        addMessageToChat(`Error: No encontré la cuenta "${accountName}".`, 'ai', 'error'); return;
                     }
                     break;
                 }
-                case "create_goal": {
+                case "set_balance": {
+                    if (financialState.cuentas[normalizedAccount]) {
+                        financialState.cuentas[normalizedAccount].saldo = amount;
+                        description = `El saldo de "${accountName}" se ha establecido en ${amount.toLocaleString('es-MX', {style:'currency', currency:'MXN'})}.`;
+                        type = 'adjustment';
+                        amount = 0;
+                    } else {
+                         addMessageToChat(`Error: No encontré la cuenta "${accountName}".`, 'ai', 'error'); return;
+                    }
+                    break;
+                }
+                 case "create_goal": {
                     if (!financialState.sinkingFunds) financialState.sinkingFunds = [];
                     financialState.sinkingFunds.push({ nombre: action.name, saldo: 0, meta: amount });
                     description = `Nueva meta de ahorro "${action.name}" creada.`;
                     amount = 0;
                     type = 'creation';
-                    break;
-                }
-                case "delete_account": {
-                    // ... (lógica de borrado)
-                    description = `Función de borrado ejecutada para "${action.account_name}".`;
-                    type = 'delete';
-                    amount = 0;
                     break;
                 }
                 case "chat": {
@@ -241,29 +253,30 @@
         function buildSystemPrompt() {
             return `
                 Tu rol es analizar la petición del usuario y extraer la intención en un formato JSON simple y estricto.
-                1.  Si es una acción financiera clara (ingreso, gasto, creación/eliminación de metas), responde con un objeto JSON.
+                1.  Si es una acción financiera clara, responde con un objeto JSON.
                 2.  Si es un saludo, una pregunta general, o algo no financiero, responde con un objeto JSON de tipo 'chat'.
                 
-                Acciones JSON posibles: 'add_income', 'make_expense', 'create_goal', 'delete_account', 'chat'.
+                Acciones JSON posibles: 'add_income', 'make_expense', 'set_balance', 'create_goal', 'chat'.
                 
-                - Para 'add_income': extrae el 'amount'.
-                - Para 'make_expense': extrae el 'amount' y de qué cuenta o fondo se saca, 'account_name'.
-                - Para 'create_goal': extrae el 'name' y el 'amount'.
-                - Para 'delete_account': extrae el 'account_name'.
-                - Para 'chat': genera una respuesta conversacional corta y útil en el campo 'response'.
+                - 'add_income': para ingresos. Extrae el 'amount'.
+                - 'make_expense': para gastos, pagos o restas. Extrae 'amount' y 'account_name'.
+                - 'set_balance': para establecer un saldo directamente. Extrae 'amount' y 'account_name'.
+                - 'create_goal': para nuevas metas de ahorro. Extrae 'name' y 'amount'.
+                - 'chat': para conversaciones. Genera una respuesta en 'response'.
 
-                Si no puedes identificar una acción clara, responde con: { "action": "chat", "response": "No estoy seguro de cómo procesar esa solicitud. ¿Puedes intentar explicarlo de otra manera?" }.
+                Si no puedes identificar una acción, responde con: { "action": "chat", "response": "No estoy seguro de cómo procesar eso. ¿Puedes ser más específico?" }.
                 Responde únicamente con el objeto JSON.
                 
                 Ejemplos:
-                - Usuario: "hola" -> { "action": "chat", "response": "¡Hola, Luis! ¿En qué puedo ayudarte hoy?" }
+                - Usuario: "hola que tal" -> { "action": "chat", "response": "¡Hola, Luis! Todo bien. ¿En qué puedo ayudarte hoy?" }
                 - Usuario: "recibí 25,000 pesos" -> { "action": "add_income", "amount": 25000 }
-                - Usuario: "gasta 500 del minifondo" -> { "action": "make_expense", "amount": 500, "account_name": "miniFondo" }
-                - Usuario: "crea una meta para un coche de 50000" -> { "action": "create_goal", "name": "coche", "amount": 50000 }
+                - Usuario: "usa 500 del minifondo para gasolina" -> { "action": "make_expense", "amount": 500, "account_name": "miniFondo" }
+                - Usuario: "pon el colchón de caja en 0" -> { "action": "set_balance", "amount": 0, "account_name": "colchonCaja" }
             `;
         }
         
         // --- 6. FUNCIONES AUXILIARES Y EVENT LISTENERS ---
+        // (El resto del código ya está completo y no necesita más ediciones)
         async function loadOrCreateInitialData() {
             try {
                 const docSnap = await getDoc(dbDocRef);
@@ -299,6 +312,7 @@
             }
         }
         function renderFinancialStatus() {
+            const financialStatusContainer = document.getElementById('financial-status');
             if (!financialStatusContainer) return;
             financialStatusContainer.innerHTML = ''; 
             let accountsHtml = '<div class="status-card rounded-lg p-4"><h3 class="text-lg font-semibold mb-2 status-title">Cuentas Principales</h3><div class="space-y-3">';
@@ -327,6 +341,7 @@
             financialStatusContainer.innerHTML += deudasHtml;
         }
         function addMessageToChat(message, sender, type = 'ai') {
+            const chatContainer = document.getElementById('chat-container');
             const messageDiv = document.createElement('div');
             messageDiv.className = `w-full flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
             let bubbleClass = 'chat-bubble-ai';
@@ -341,6 +356,7 @@
         }
         
         const toggleSidebar = (show) => {
+            const sidebar = document.getElementById('financial-sidebar');
             const sidebarOverlay = document.getElementById('sidebar-overlay');
             if (show) {
                 sidebar.classList.remove('-translate-x-full');
@@ -350,15 +366,15 @@
                 if (window.innerWidth < 1024) sidebarOverlay.classList.add('hidden');
             }
         };
-        menuBtn.addEventListener('click', () => toggleSidebar(true));
-        closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
+        document.getElementById('menu-btn').addEventListener('click', () => toggleSidebar(true));
+        document.getElementById('close-sidebar-btn').addEventListener('click', () => toggleSidebar(false));
         if (document.getElementById('sidebar-overlay')) {
             document.getElementById('sidebar-overlay').addEventListener('click', () => toggleSidebar(false));
         }
         
         window.onload = loadOrCreateInitialData;
-        sendButton.addEventListener('click', handleUserInput);
-        userInput.addEventListener('keydown', (event) => {
+        document.getElementById('send-button').addEventListener('click', handleUserInput);
+        document.getElementById('user-input').addEventListener('keydown', (event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
                 handleUserInput();
