@@ -231,8 +231,7 @@
             sendButton.disabled = true;
             loadingIndicator.style.display = 'flex';
             
-            // Pasamos el estado financiero actual junto con la consulta
-            const fullQuery = `Estado financiero actual: ${JSON.stringify(financialState)}\n\nConsulta del usuario: ${query}`;
+            const fullQuery = `Este es el estado financiero actual del usuario en formato JSON: ${JSON.stringify(financialState)}\n\nEsta es la consulta o la instrucción del usuario: "${query}"`;
             chatHistory.push({ role: "user", parts: [{ text: fullQuery }] });
             
             try {
@@ -269,8 +268,8 @@
         function buildSystemPrompt() {
             return `
                 Tu rol es actuar como un despachador de intenciones. Analiza la petición del usuario y el estado financiero proporcionado.
-                1.  Si es una acción financiera clara, responde con un objeto JSON.
-                2.  Si es un saludo, una pregunta general, o una pregunta de consulta sobre los datos, responde con un objeto JSON de tipo 'chat'.
+                1.  Si es una acción financiera clara (ingreso, gasto, creación/eliminación de metas, establecer saldo), responde con un objeto JSON de acción.
+                2.  Si es un saludo, una pregunta general, o una pregunta de consulta sobre los datos, responde con un objeto JSON de tipo 'chat' y formula la respuesta tú mismo.
 
                 Acciones JSON posibles: 'add_income', 'make_expense', 'set_balance', 'create_goal', 'delete_account', 'chat'.
                 
@@ -286,9 +285,8 @@
                 
                 Ejemplos:
                 - Usuario: "hola que tal" -> { "action": "chat", "response": "¡Hola, Luis! Todo bien. ¿En qué puedo ayudarte hoy?" }
-                - Usuario: "¿cuanto tengo en el minifondo?" -> { "action": "chat", "response": "Claro, en tu Mini Fondo tienes un saldo de X." } (Debes inferir X del JSON)
+                - Usuario: "¿cuanto tengo en el minifondo?" (y el JSON dice que tiene 14,382.08) -> { "action": "chat", "response": "Claro, en tu Mini Fondo tienes un saldo de $14,382.08." }
                 - Usuario: "recibí 25,000 pesos" -> { "action": "add_income", "amount": 25000 }
-                - Usuario: "usa 500 del minifondo para gasolina" -> { "action": "make_expense", "amount": 500, "account_name": "miniFondo" }
                 - Usuario: "pon el colchón de caja en 0" -> { "action": "set_balance", "amount": 0, "account_name": "colchonCaja" }
                 - Usuario: "cancela el viaje a la playa" -> { "action": "delete_account", "account_name": "viaje a la playa" }
             `;
@@ -311,7 +309,6 @@
                 loadingOverlay.style.display = 'none';
                 const initialMessage = "Hola Luis, soy tu asistente financiero. He cargado tu estado actual desde la base de datos. ¿En qué te puedo ayudar hoy?";
                 addMessageToChat(initialMessage, 'ai');
-                // No añadir el saludo inicial al historial de la IA para no confundirla.
             }
         }
         async function saveFinancialState() {
