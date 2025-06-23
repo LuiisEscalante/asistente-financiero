@@ -110,20 +110,21 @@
             let description = "";
             let amount = parseFloat(action.amount) || 0;
             let type = 'neutral';
-            let accountName = action.account_name || 'corriente';
+            let accountName = action.account_name || '';
             
             const normalizeAccountName = (name) => {
                 const lowerName = name.toLowerCase();
+                // Mapeo de nombres comunes a claves de objeto
                 const mapping = {
-                    'colchon de caja': 'colchonCaja', 'caja': 'colchonCaja',
+                    'colchon de caja': 'colchonCaja', 'colchon': 'colchonCaja', 'caja': 'colchonCaja',
                     'mini fondo': 'miniFondo', 'minifondo': 'miniFondo',
-                    'fondo de emergencia': 'fondo6m', 'fondo6m': 'fondo6m',
+                    'fondo 6m': 'fondo6m', 'fondo de emergencia': 'fondo6m',
                     'corriente': 'corriente'
                 };
                 for (const key in mapping) {
                     if (lowerName.includes(key)) return mapping[key];
                 }
-                return name; // Devuelve el nombre original si no hay coincidencia
+                return name;
             };
             
             const normalizedAccount = normalizeAccountName(accountName);
@@ -154,7 +155,7 @@
                     
                     if (income > 0) {
                         financialState.cuentas.corriente.saldo += income;
-                         if(income > 0) distributions.push(`${income.toLocaleString('es-MX', {style:'currency', currency:'MXN'})} a Cuenta Corriente.`);
+                        if(income > 0) distributions.push(`${income.toLocaleString('es-MX', {style:'currency', currency:'MXN'})} a Cuenta Corriente.`);
                     }
                     
                     description += distributions.join(' ');
@@ -166,7 +167,7 @@
                         financialState.cuentas[normalizedAccount].saldo -= amount;
                         description = `Gasto de ${amount.toLocaleString('es-MX', {style:'currency', currency:'MXN'})} registrado desde "${accountName}".`;
                         type = 'expense';
-                        amount = -amount; // Registrar como negativo
+                        amount = -amount;
                     } else {
                         addMessageToChat(`Error: No encontré la cuenta "${accountName}".`, 'ai', 'error'); return;
                     }
@@ -189,6 +190,19 @@
                     description = `Nueva meta de ahorro "${action.name}" creada.`;
                     amount = 0;
                     type = 'creation';
+                    break;
+                }
+                 case "delete_account": {
+                    let accountToDelete = action.account_name.toLowerCase();
+                    let originalLength = financialState.sinkingFunds.length;
+                    financialState.sinkingFunds = financialState.sinkingFunds.filter(fund => fund.nombre.toLowerCase() !== accountToDelete);
+                    if (financialState.sinkingFunds.length < originalLength) {
+                        description = `Meta de ahorro "${action.account_name}" eliminada.`;
+                    } else {
+                        description = `No se encontró la meta de ahorro "${action.account_name}" para eliminar.`;
+                    }
+                    type = 'delete';
+                    amount = 0;
                     break;
                 }
                 case "chat": {
@@ -256,12 +270,13 @@
                 1.  Si es una acción financiera clara, responde con un objeto JSON.
                 2.  Si es un saludo, una pregunta general, o algo no financiero, responde con un objeto JSON de tipo 'chat'.
                 
-                Acciones JSON posibles: 'add_income', 'make_expense', 'set_balance', 'create_goal', 'chat'.
+                Acciones JSON posibles: 'add_income', 'make_expense', 'set_balance', 'create_goal', 'delete_account', 'chat'.
                 
                 - 'add_income': para ingresos. Extrae el 'amount'.
                 - 'make_expense': para gastos, pagos o restas. Extrae 'amount' y 'account_name'.
                 - 'set_balance': para establecer un saldo directamente. Extrae 'amount' y 'account_name'.
                 - 'create_goal': para nuevas metas de ahorro. Extrae 'name' y 'amount'.
+                - 'delete_account': para eliminar metas. Extrae el 'account_name'.
                 - 'chat': para conversaciones. Genera una respuesta en 'response'.
 
                 Si no puedes identificar una acción, responde con: { "action": "chat", "response": "No estoy seguro de cómo procesar eso. ¿Puedes ser más específico?" }.
@@ -272,11 +287,11 @@
                 - Usuario: "recibí 25,000 pesos" -> { "action": "add_income", "amount": 25000 }
                 - Usuario: "usa 500 del minifondo para gasolina" -> { "action": "make_expense", "amount": 500, "account_name": "miniFondo" }
                 - Usuario: "pon el colchón de caja en 0" -> { "action": "set_balance", "amount": 0, "account_name": "colchonCaja" }
+                - Usuario: "cancela el viaje a la playa" -> { "action": "delete_account", "account_name": "viaje a la playa" }
             `;
         }
         
         // --- 6. FUNCIONES AUXILIARES Y EVENT LISTENERS ---
-        // (El resto del código ya está completo y no necesita más ediciones)
         async function loadOrCreateInitialData() {
             try {
                 const docSnap = await getDoc(dbDocRef);
@@ -356,7 +371,6 @@
         }
         
         const toggleSidebar = (show) => {
-            const sidebar = document.getElementById('financial-sidebar');
             const sidebarOverlay = document.getElementById('sidebar-overlay');
             if (show) {
                 sidebar.classList.remove('-translate-x-full');
