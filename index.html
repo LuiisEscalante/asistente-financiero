@@ -77,7 +77,7 @@
           messagingSenderId: "1042510262841",
           appId: "1:1042510262841:web:46a4a02d88c3cc1523d3e8"
         };
-        const GEMINI_API_KEY = "AIzaSyB04aZK2GwiyRAAV5lrfczaM9Lx9iMV-wU";
+        const GEMINI_API_KEY = "PEGA_TU_API_KEY_DE_GEMINI_AQUI";
         
         // --- 2. REFERENCIAS A ELEMENTOS UI ---
         const loadingOverlay = document.getElementById('loading-overlay');
@@ -109,7 +109,14 @@
         function handleFinancialAction(action) {
             let description = "";
             let amount = parseFloat(action.amount) || 0;
-            let type = action.type || 'neutral';
+            let type = 'neutral';
+            let accountName = action.account_name || 'corriente'; // Default to corriente if not specified
+            
+            // Normalizar el nombre de la cuenta para que coincida con las claves del objeto
+            if (accountName.toLowerCase().includes('caja')) accountName = 'colchonCaja';
+            if (accountName.toLowerCase().includes('mini')) accountName = 'miniFondo';
+            if (accountName.toLowerCase().includes('fondo6m')) accountName = 'fondo6m';
+
 
             switch (action.action) {
                 case "add_income": {
@@ -144,6 +151,19 @@
                     type = 'income';
                     break;
                 }
+                case "make_expense": {
+                    if (financialState.cuentas[accountName]) {
+                        financialState.cuentas[accountName].saldo -= amount;
+                        description = `Gasto de ${amount.toLocaleString('es-MX', {style:'currency', currency:'MXN'})} registrado desde "${accountName}".`;
+                        type = 'expense';
+                        amount = -amount; // Registrar como negativo
+                    } else {
+                        description = `Error: No se encontró la cuenta "${accountName}".`;
+                        addMessageToChat(description, 'ai', 'error');
+                        return;
+                    }
+                    break;
+                }
                 case "create_goal": {
                     if (!financialState.sinkingFunds) financialState.sinkingFunds = [];
                     financialState.sinkingFunds.push({ nombre: action.name, saldo: 0, meta: amount });
@@ -153,17 +173,15 @@
                     break;
                 }
                 case "delete_account": {
-                    let accountName = action.account_name.toLowerCase();
-                    let found = false;
                     // ... (lógica de borrado)
-                    description = `Función de borrado ejecutada para "${action.account_name}".`; // Mensaje genérico por ahora
+                    description = `Función de borrado ejecutada para "${action.account_name}".`;
                     type = 'delete';
                     amount = 0;
                     break;
                 }
                 case "chat": {
                     addMessageToChat(action.response, 'ai');
-                    return; // Importante: no guardar ni hacer nada más
+                    return; 
                 }
                 default:
                     addMessageToChat(`Acción no reconocida por el sistema: "${action.action}".`, 'ai', 'error');
@@ -222,13 +240,14 @@
 
         function buildSystemPrompt() {
             return `
-                Tu rol es actuar como un despachador de intenciones. Analiza la petición del usuario y clasifícala.
+                Tu rol es analizar la petición del usuario y extraer la intención en un formato JSON simple y estricto.
                 1.  Si es una acción financiera clara (ingreso, gasto, creación/eliminación de metas), responde con un objeto JSON.
                 2.  Si es un saludo, una pregunta general, o algo no financiero, responde con un objeto JSON de tipo 'chat'.
                 
-                Acciones JSON posibles: 'add_income', 'create_goal', 'delete_account', 'chat'.
+                Acciones JSON posibles: 'add_income', 'make_expense', 'create_goal', 'delete_account', 'chat'.
                 
                 - Para 'add_income': extrae el 'amount'.
+                - Para 'make_expense': extrae el 'amount' y de qué cuenta o fondo se saca, 'account_name'.
                 - Para 'create_goal': extrae el 'name' y el 'amount'.
                 - Para 'delete_account': extrae el 'account_name'.
                 - Para 'chat': genera una respuesta conversacional corta y útil en el campo 'response'.
@@ -239,8 +258,8 @@
                 Ejemplos:
                 - Usuario: "hola" -> { "action": "chat", "response": "¡Hola, Luis! ¿En qué puedo ayudarte hoy?" }
                 - Usuario: "recibí 25,000 pesos" -> { "action": "add_income", "amount": 25000 }
+                - Usuario: "gasta 500 del minifondo" -> { "action": "make_expense", "amount": 500, "account_name": "miniFondo" }
                 - Usuario: "crea una meta para un coche de 50000" -> { "action": "create_goal", "name": "coche", "amount": 50000 }
-                - Usuario: "elimina el fondo para vacaciones" -> { "action": "delete_account", "account_name": "vacaciones" }
             `;
         }
         
