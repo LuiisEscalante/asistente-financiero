@@ -110,11 +110,10 @@
             let description = "";
             let amount = parseFloat(action.amount) || 0;
             let type = 'neutral';
-            let accountName = action.account_name || '';
+            let accountName = action.account_name || 'corriente';
             
             const normalizeAccountName = (name) => {
                 const lowerName = name.toLowerCase();
-                // Mapeo de nombres comunes a claves de objeto
                 const mapping = {
                     'colchon de caja': 'colchonCaja', 'colchon': 'colchonCaja', 'caja': 'colchonCaja',
                     'mini fondo': 'miniFondo', 'minifondo': 'miniFondo',
@@ -155,7 +154,7 @@
                     
                     if (income > 0) {
                         financialState.cuentas.corriente.saldo += income;
-                        if(income > 0) distributions.push(`${income.toLocaleString('es-MX', {style:'currency', currency:'MXN'})} a Cuenta Corriente.`);
+                         if(income > 0) distributions.push(`${income.toLocaleString('es-MX', {style:'currency', currency:'MXN'})} a Cuenta Corriente.`);
                     }
                     
                     description += distributions.join(' ');
@@ -232,7 +231,10 @@
             sendButton.disabled = true;
             loadingIndicator.style.display = 'flex';
             
-            chatHistory.push({ role: "user", parts: [{ text: query }] });
+            // Pasamos el estado financiero actual junto con la consulta
+            const fullQuery = `Estado financiero actual: ${JSON.stringify(financialState)}\n\nConsulta del usuario: ${query}`;
+            chatHistory.push({ role: "user", parts: [{ text: fullQuery }] });
+            
             try {
                 const systemInstruction = { parts: [{ text: buildSystemPrompt() }] };
                 const payload = {
@@ -266,24 +268,25 @@
 
         function buildSystemPrompt() {
             return `
-                Tu rol es analizar la petición del usuario y extraer la intención en un formato JSON simple y estricto.
+                Tu rol es actuar como un despachador de intenciones. Analiza la petición del usuario y el estado financiero proporcionado.
                 1.  Si es una acción financiera clara, responde con un objeto JSON.
-                2.  Si es un saludo, una pregunta general, o algo no financiero, responde con un objeto JSON de tipo 'chat'.
-                
+                2.  Si es un saludo, una pregunta general, o una pregunta de consulta sobre los datos, responde con un objeto JSON de tipo 'chat'.
+
                 Acciones JSON posibles: 'add_income', 'make_expense', 'set_balance', 'create_goal', 'delete_account', 'chat'.
                 
-                - 'add_income': para ingresos. Extrae el 'amount'.
-                - 'make_expense': para gastos, pagos o restas. Extrae 'amount' y 'account_name'.
-                - 'set_balance': para establecer un saldo directamente. Extrae 'amount' y 'account_name'.
-                - 'create_goal': para nuevas metas de ahorro. Extrae 'name' y 'amount'.
-                - 'delete_account': para eliminar metas. Extrae el 'account_name'.
-                - 'chat': para conversaciones. Genera una respuesta en 'response'.
+                - 'add_income': para ingresos.
+                - 'make_expense': para gastos, pagos o restas.
+                - 'set_balance': para establecer un saldo directamente.
+                - 'create_goal': para nuevas metas de ahorro.
+                - 'delete_account': para eliminar metas.
+                - 'chat': para conversaciones y **consultas sobre los datos**.
 
                 Si no puedes identificar una acción, responde con: { "action": "chat", "response": "No estoy seguro de cómo procesar eso. ¿Puedes ser más específico?" }.
                 Responde únicamente con el objeto JSON.
                 
                 Ejemplos:
                 - Usuario: "hola que tal" -> { "action": "chat", "response": "¡Hola, Luis! Todo bien. ¿En qué puedo ayudarte hoy?" }
+                - Usuario: "¿cuanto tengo en el minifondo?" -> { "action": "chat", "response": "Claro, en tu Mini Fondo tienes un saldo de X." } (Debes inferir X del JSON)
                 - Usuario: "recibí 25,000 pesos" -> { "action": "add_income", "amount": 25000 }
                 - Usuario: "usa 500 del minifondo para gasolina" -> { "action": "make_expense", "amount": 500, "account_name": "miniFondo" }
                 - Usuario: "pon el colchón de caja en 0" -> { "action": "set_balance", "amount": 0, "account_name": "colchonCaja" }
@@ -308,8 +311,7 @@
                 loadingOverlay.style.display = 'none';
                 const initialMessage = "Hola Luis, soy tu asistente financiero. He cargado tu estado actual desde la base de datos. ¿En qué te puedo ayudar hoy?";
                 addMessageToChat(initialMessage, 'ai');
-                chatHistory.push({ role: 'model', parts: [{ text: initialMessage }] });
-                userInput.focus();
+                // No añadir el saludo inicial al historial de la IA para no confundirla.
             }
         }
         async function saveFinancialState() {
@@ -340,7 +342,7 @@
             let sinkingFundsHtml = '<div class="status-card rounded-lg p-4"><h3 class="text-lg font-semibold mb-2 status-title">Sinking Funds (Metas)</h3><div class="space-y-3">';
             if (financialState.sinkingFunds && financialState.sinkingFunds.length > 0) {
                 financialState.sinkingFunds.forEach(fund => {
-                    const progress = (fund.saldo / fund.meta * 100).toFixed(0);
+                    const progress = fund.meta > 0 ? ((fund.saldo || 0) / fund.meta * 100).toFixed(0) : 100;
                     sinkingFundsHtml += `<div class="text-sm"><div class="flex justify-between mb-1"><span class="font-medium status-value">${fund.nombre}</span><span class="font-bold status-value positive">$${(fund.saldo || 0).toLocaleString()} / $${(fund.meta || 0).toLocaleString()}</span></div><div class="w-full bg-gray-800 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: ${progress}%"></div></div></div>`;
                 });
             } else {
