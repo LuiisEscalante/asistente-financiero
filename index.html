@@ -191,14 +191,27 @@
                     type = 'creation';
                     break;
                 }
-                 case "delete_account": {
-                    let accountToDelete = action.account_name.toLowerCase();
+                 case "delete_goal": {
+                    let goalNameToDelete = action.goal_name.toLowerCase();
                     let originalLength = financialState.sinkingFunds.length;
-                    financialState.sinkingFunds = financialState.sinkingFunds.filter(fund => fund.nombre.toLowerCase() !== accountToDelete);
+                    financialState.sinkingFunds = financialState.sinkingFunds.filter(fund => fund.nombre.toLowerCase() !== goalNameToDelete);
                     if (financialState.sinkingFunds.length < originalLength) {
-                        description = `Meta de ahorro "${action.account_name}" eliminada.`;
+                        description = `Meta de ahorro "${action.goal_name}" eliminada.`;
                     } else {
-                        description = `No se encontró la meta de ahorro "${action.account_name}" para eliminar.`;
+                        description = `No se encontró la meta de ahorro "${action.goal_name}" para eliminar.`;
+                    }
+                    type = 'delete';
+                    amount = 0;
+                    break;
+                }
+                case "delete_debt": {
+                    let debtNameToDelete = action.debt_name.toLowerCase();
+                    let originalLength = financialState.deudas.length;
+                    financialState.deudas = financialState.deudas.filter(debt => debt.acreedor.toLowerCase() !== debtNameToDelete);
+                     if (financialState.deudas.length < originalLength) {
+                        description = `Deuda con "${action.debt_name}" eliminada.`;
+                    } else {
+                        description = `No se encontró la deuda "${action.debt_name}" para eliminar.`;
                     }
                     type = 'delete';
                     amount = 0;
@@ -268,16 +281,17 @@
         function buildSystemPrompt() {
             return `
                 Tu rol es actuar como un despachador de intenciones. Analiza la petición del usuario y el estado financiero proporcionado.
-                1.  Si es una acción financiera clara (ingreso, gasto, creación/eliminación de metas, establecer saldo), responde con un objeto JSON de acción.
+                1.  Si es una acción financiera clara, responde con un objeto JSON.
                 2.  Si es un saludo, una pregunta general, o una pregunta de consulta sobre los datos, responde con un objeto JSON de tipo 'chat' y formula la respuesta tú mismo.
 
-                Acciones JSON posibles: 'add_income', 'make_expense', 'set_balance', 'create_goal', 'delete_account', 'chat'.
+                Acciones JSON posibles: 'add_income', 'make_expense', 'set_balance', 'create_goal', 'delete_goal', 'delete_debt', 'chat'.
                 
                 - 'add_income': para ingresos.
                 - 'make_expense': para gastos, pagos o restas.
                 - 'set_balance': para establecer un saldo directamente.
                 - 'create_goal': para nuevas metas de ahorro.
-                - 'delete_account': para eliminar metas.
+                - 'delete_goal': para eliminar metas de ahorro. Extrae el 'goal_name'.
+                - 'delete_debt': para eliminar deudas. Extrae el 'debt_name'.
                 - 'chat': para conversaciones y **consultas sobre los datos**.
 
                 Si no puedes identificar una acción, responde con: { "action": "chat", "response": "No estoy seguro de cómo procesar eso. ¿Puedes ser más específico?" }.
@@ -288,7 +302,8 @@
                 - Usuario: "¿cuanto tengo en el minifondo?" (y el JSON dice que tiene 14,382.08) -> { "action": "chat", "response": "Claro, en tu Mini Fondo tienes un saldo de $14,382.08." }
                 - Usuario: "recibí 25,000 pesos" -> { "action": "add_income", "amount": 25000 }
                 - Usuario: "pon el colchón de caja en 0" -> { "action": "set_balance", "amount": 0, "account_name": "colchonCaja" }
-                - Usuario: "cancela el viaje a la playa" -> { "action": "delete_account", "account_name": "viaje a la playa" }
+                - Usuario: "cancela la deuda con el banco" -> { "action": "delete_debt", "debt_name": "Banco" }
+                - Usuario: "elimina la meta del viaje" -> { "action": "delete_goal", "goal_name": "viaje a la playa" }
             `;
         }
         
